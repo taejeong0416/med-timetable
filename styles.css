@@ -105,10 +105,22 @@ table.grid tr.thin td { height: 13px; }
 table.grid tr.thin td.hr { font-size: 9px; padding-top: 1px; opacity: 0.6; }
 table.grid tr.thin td.slot { height: 13px; opacity: 0.22; }
 .blk { display: block; width: 100%; height: 100%; min-height: 40px; border-radius: 7px;
-       padding: 5px 5px; font-size: 10.5px; line-height: 1.22; font-weight: 600; text-align: left;
+       padding: 5px 5px; font-size: var(--blk); line-height: 1.22; font-weight: 600; text-align: left;
        overflow: hidden; letter-spacing: -0.02em; word-break: break-all; }
-.blk .k { font-size: 9px; font-weight: 800; display: block; opacity: 0.9; }
+.blk .k { font-size: calc(var(--blk) - 1.5px); font-weight: 800; display: block; opacity: 0.9; }
+.blk .p { display: block; font-weight: 500; opacity: 0.72; margin-top: 2px; }
 .blk.now { box-shadow: 0 0 0 2px var(--text); }
+
+/* 블록 글자 크기 (설정에서 변경) */
+:root { --blk: 10.5px; }
+body[data-fs="s"] { --blk: 9.5px; }
+body[data-fs="l"] { --blk: 12px; }
+
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+       padding: 11px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.seg { display: flex; gap: 2px; background: var(--surface-2); padding: 2px; border-radius: 9px; flex: none; }
+.seg button { padding: 6px 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
 
 /* 학기 전체 주차 스트립 (시험 있는 주는 점) */
 .strip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;

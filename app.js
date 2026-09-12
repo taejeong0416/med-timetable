@@ -32,10 +32,10 @@
   }
 
   /* ---------- 과정 색상 ---------- */
-  function colorOf(cid) {
+  function colorOf(cid, light) {
     var i = DB.courses.indexOf(cid);
     var h = HUES[(i < 0 ? DB.courses.length : i) % HUES.length];
-    return dark.matches
+    return (dark.matches && !light)
       ? { bg: 'hsl(' + h + ' 30% 23%)', fg: 'hsl(' + h + ' 78% 85%)', bar: 'hsl(' + h + ' 62% 62%)' }
       : { bg: 'hsl(' + h + ' 72% 93%)', fg: 'hsl(' + h + ' 54% 29%)', bar: 'hsl(' + h + ' 56% 52%)' };
   }
@@ -43,6 +43,15 @@
   /* ---------- 저장 ---------- */
   function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+
+  /* 표시 설정: 블록이 좁아 정보를 다 못 넣으므로 무엇을 보일지 고르게 한다 */
+  var PREF = { fs: 'm', prof: false };
+  try { Object.assign(PREF, JSON.parse(localStorage.getItem('medtt.pref') || '{}')); } catch (e) {}
+  function savePref() {
+    try { localStorage.setItem('medtt.pref', JSON.stringify(PREF)); } catch (e) {}
+    document.body.dataset.fs = PREF.fs;
+  }
+  document.body.dataset.fs = PREF.fs;
 
   /* ---------- 시트 ---------- */
   function openSheet(html) {
@@ -226,14 +235,136 @@
                                : 'background:' + c.bg + ';color:' + c.fg;
           h += '<td rowspan="' + span + '"><button class="blk' + (isNow ? ' now' : '') + '" style="' + style + '" data-ev="' + start[k] + '">'
             + (e.kind !== '강의' ? '<span class="k">' + esc(e.kind) + '</span>' : '')
-            + esc(e.title) + '</button></td>';
+            + esc(e.title)
+            + (PREF.prof && e.prof && span > 1 ? '<span class="p">' + esc(e.prof) + '</span>' : '')
+            + '</button></td>';
         } else if (!covered[k]) {
           h += '<td class="slot' + (d === t ? ' td' : '') + '"></td>';
         }
       });
       h += '</tr>';
     });
-    return h + '</tbody></table>';
+    return h + '</tbody></table>'
+      + '<button class="btn ghost" id="shot">이번 주 시간표 이미지로 저장</button>';
+  }
+
+  /* ---------- 주간 시간표를 이미지로 (에타에서 가장 많이 쓰이는 기능) ---------- */
+  function wrap(ctx, text, w, max) {
+    var out = [], line = '';
+    for (var i = 0; i < text.length; i++) {
+      var t = line + text[i];
+      if (ctx.measureText(t).width > w && line) { out.push(line); line = text[i]; }
+      else line = t;
+      if (out.length >= max) return out;
+    }
+    if (line) out.push(line);
+    return out.slice(0, max);
+  }
+
+  function exportImage() {
+    var all = DB.weeks[weekCur], L = live();
+    var cols = all.filter(function (d) { return L.days[dowOf(d)]; });
+
+    var start = {}, covered = {};
+    DB.events.forEach(function (e) {
+      var di = cols.indexOf(e.date);
+      if (di < 0) return;
+      start[di + '|' + e.periods[0]] = e;
+      for (var p = e.periods[0]; p <= e.periods[1]; p++) covered[di + '|' + p] = 1;
+    });
+    var rows = L.periods.filter(function (p) {
+      return cols.some(function (_, di) { return covered[di + '|' + p.no]; });
+    });
+
+    var PAD = 44, HR = 62, HEAD = 172, ROW = 96, FOOT = 92;
+    var W = 1080, GW = W - PAD * 2 - HR;
+    var CW = GW / cols.length;
+    var H = HEAD + 54 + rows.length * ROW + FOOT + PAD;
+
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var x = cv.getContext('2d');
+    // roundRect는 Safari 16.4 미만에 없다. 모서리만 포기하고 계속 그린다.
+    if (!x.roundRect) x.roundRect = function (a, b, c, d) { this.rect(a, b, c, d); };
+    var FONT = '-apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
+
+    // 헤더
+    x.fillStyle = '#8b90a6'; x.font = '500 26px ' + FONT;
+    x.fillText(DB.title, PAD, PAD + 30);
+    x.fillStyle = '#141723'; x.font = '700 44px ' + FONT;
+    x.fillText(weekCur + '주차  ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]), PAD, PAD + 88);
+
+    // 요일 헤더
+    var gy = HEAD;
+    x.textAlign = 'center';
+    cols.forEach(function (d, i) {
+      x.fillStyle = '#6b7186'; x.font = '600 24px ' + FONT;
+      x.fillText(dow(d) + '  ' + md(d), PAD + HR + CW * i + CW / 2, gy + 34);
+    });
+    x.textAlign = 'left';
+
+    // 그리드
+    var gy0 = gy + 54;
+    rows.forEach(function (p, ri) {
+      var y = gy0 + ri * ROW;
+      x.fillStyle = '#9aa1bb'; x.font = '500 20px ' + FONT;
+      x.fillText(p.start, PAD, y + 30);
+      cols.forEach(function (d, di) {
+        var k = di + '|' + p.no;
+        var bx = PAD + HR + CW * di + 3, bw = CW - 6;
+        if (start[k]) {
+          var e = start[k];
+          var ri2 = rows.findIndex(function (q) { return q.no === e.periods[1]; });
+          var bh = ((ri2 < 0 ? ri : ri2) - ri + 1) * ROW - 6;
+          var c = colorOf(e.courseId, true);
+          x.fillStyle = e.isExam ? '#c4344f' : c.bg;
+          x.beginPath(); x.roundRect(bx, y, bw, bh, 12); x.fill();
+          var ty = y + 30;
+          if (e.kind !== '강의') {
+            x.fillStyle = e.isExam ? '#ffd9e0' : c.fg;
+            x.font = '800 18px ' + FONT;
+            x.fillText(e.kind, bx + 12, ty); ty += 26;
+          }
+          x.fillStyle = e.isExam ? '#ffffff' : c.fg;
+          x.font = '600 21px ' + FONT;
+          wrap(x, e.title, bw - 24, Math.max(1, Math.floor((bh - (ty - y)) / 27))).forEach(function (ln) {
+            x.fillText(ln, bx + 12, ty); ty += 27;
+          });
+          if (e.prof && ty < y + bh - 6) {
+            x.font = '500 18px ' + FONT; x.globalAlpha = 0.75;
+            x.fillText(e.prof, bx + 12, ty); x.globalAlpha = 1;
+          }
+        } else if (!covered[k]) {
+          x.fillStyle = '#f2f4f9';
+          x.beginPath(); x.roundRect(bx, y, bw, ROW - 6, 12); x.fill();
+        }
+      });
+    });
+
+    // 푸터: 다음 시험
+    var ex = nextExam(), fy = H - PAD - 30;
+    if (ex) {
+      var n = diffDays(today(), ex.date);
+      x.fillStyle = '#c4344f'; x.font = '800 28px ' + FONT;
+      var tag = n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : '';
+      x.fillText(tag, PAD, fy);
+      x.fillStyle = '#4a5064'; x.font = '500 24px ' + FONT;
+      x.fillText(ex.title + '  ·  ' + md(ex.date) + '(' + dow(ex.date) + ')', PAD + x.measureText(tag).width + 60, fy);
+    }
+
+    var name = weekCur + '주차_시간표.png';
+    cv.toBlob(function (blob) {
+      var file = new File([blob], name, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: weekCur + '주차 시간표' }).catch(function () {});
+      } else {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = name; a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      }
+    }, 'image/png');
   }
 
   /* ---------- 이벤트 연결 ---------- */
@@ -256,6 +387,13 @@
         showDetail(e);
       };
     });
+    if ($('shot')) $('shot').onclick = function () {
+      $('shot').textContent = '만드는 중...';
+      setTimeout(function () {
+        try { exportImage(); } catch (e) { alert('이미지를 만들지 못했습니다.'); }
+        $('shot').textContent = '이번 주 시간표 이미지로 저장';
+      }, 30);
+    };
     var on = main.querySelector('.strip .wk.on');
     if (on) on.parentNode.scrollLeft = on.offsetLeft - on.parentNode.clientWidth / 2 + on.clientWidth / 2;
   }
@@ -307,11 +445,25 @@
   function showSettings() {
     openSheet('<h3>설정</h3><div class="sub">' + esc(DB ? DB.title : '') + '</div>'
       + (DB ? '<div class="kv"><span>일정</span><b>' + DB.stats.events + '개 · ' + DB.stats.weeks + '주 · 시험 ' + DB.stats.exams + '개</b></div>' : '')
+      + '<div class="opt"><span>글자 크기</span><div class="seg" id="segFs">'
+      + ['s', 'm', 'l'].map(function (v, i) {
+          return '<button data-fs="' + v + '"' + (PREF.fs === v ? ' class="on"' : '') + '>' + ['작게', '보통', '크게'][i] + '</button>';
+        }).join('') + '</div></div>'
+      + '<div class="opt"><span>주간표에 교수명</span><div class="seg" id="segProf">'
+      + '<button data-prof="0"' + (PREF.prof ? '' : ' class="on"') + '>숨김</button>'
+      + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
       + '<button class="btn" id="sReplace">엑셀 다시 올리기</button>'
       + '<button class="btn ghost" id="sReset">시간표 삭제</button>'
       + '<div class="note"><b>홈 화면에 추가</b><br>'
       + 'iPhone: Safari 하단 공유 버튼 → 홈 화면에 추가<br>'
       + 'Android: Chrome 우측 상단 ⋮ → 홈 화면에 추가</div>');
+
+    Array.prototype.forEach.call(sheet.querySelectorAll('[data-fs]'), function (b) {
+      b.onclick = function () { PREF.fs = b.dataset.fs; savePref(); showSettings(); render(); };
+    });
+    Array.prototype.forEach.call(sheet.querySelectorAll('[data-prof]'), function (b) {
+      b.onclick = function () { PREF.prof = b.dataset.prof === '1'; savePref(); showSettings(); render(); };
+    });
     $('sReplace').onclick = function () { closeSheet(); $('file').click(); };
     $('sReset').onclick = function () {
       localStorage.removeItem(KEY); DB = null; _live = null; closeSheet(); hdr.hidden = true; renderUpload();
