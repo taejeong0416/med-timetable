@@ -2,13 +2,14 @@
   'use strict';
 
   var KEY = 'medtt.v1';
-  var PALETTE = ['#c9736c', '#c4a765', '#6f92b8', '#d49a6f',
-                 '#94ab74', '#8e81b5', '#74ada6', '#7cae8a'];
+  /* 시험은 빨강을 독차지한다. 그래서 과목 팔레트에는 빨강을 넣지 않는다. */
+  var PALETTE = ['#6f92b8', '#c4a765', '#94ab74', '#8e81b5',
+                 '#d49a6f', '#74ada6', '#7cae8a'];
+  var EXAM = '#c9736c';
+  var OFF = '#a8b0b5';
   var DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
   var DB = null;
-  var tab = 'today';
-  var dayCur = null;
   var weekCur = null;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -20,7 +21,6 @@
   function today() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function nowHM() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
   function diffDays(a, b) { return Math.round((toDate(b) - toDate(a)) / 86400000); }
-  function shift(s, n) { var d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
   function dowOf(s) { return toDate(s).getUTCDay(); }
   function dow(s) { return DOW[dowOf(s)]; }
   function md(s) { var p = s.split('-'); return +p[1] + '/' + +p[2]; }
@@ -32,11 +32,28 @@
   }
 
   /* ---------- 과정 색상 ----------
-     흰 글씨가 얹히는 채도 낮은 파스텔 여덟 가지를 과정 순서대로 돌려 쓴다.
-     주간표 블록 바탕과 오늘 목록의 세로 막대가 같은 색을 공유한다. */
+     과목명을 해시해 파스텔을 고른다. 엑셀을 다시 올려 과목 순서가 바뀌어도
+     같은 과목은 같은 색을 유지한다. 두 과목이 같은 칸에 걸리면 빈 칸으로 밀어
+     팔레트가 남아 있는 한 색이 겹치지 않게 한다. */
+  var _cmap = null;
+  function hash(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+  function courseColors() {
+    if (_cmap) return _cmap;
+    var used = {}, map = {};
+    DB.courses.forEach(function (c, n) {
+      var i = hash(c) % PALETTE.length;
+      if (n < PALETTE.length) while (used[i]) i = (i + 1) % PALETTE.length;
+      used[i] = 1; map[c] = PALETTE[i];
+    });
+    _cmap = map;
+    return map;
+  }
   function colorOf(cid) {
-    var i = DB.courses.indexOf(cid);
-    return PALETTE[(i < 0 ? DB.courses.length : i) % PALETTE.length];
+    return cid ? courseColors()[cid] || OFF : OFF;   // 휴일·자율학습은 과목이 없다
   }
 
   /* ---------- 저장 ---------- */
@@ -63,11 +80,6 @@
   /* ---------- 파생 데이터 ---------- */
   var real = function (e) { return e.kind !== '휴일'; };
 
-  function classDays() {
-    var seen = {}, out = [];
-    DB.events.forEach(function (e) { if (real(e) && !seen[e.date]) { seen[e.date] = 1; out.push(e.date); } });
-    return out.sort();
-  }
   function nextExam() {
     var t = today();
     return DB.events.filter(function (e) { return e.isExam && e.date >= t; })[0] || null;
@@ -124,11 +136,7 @@
     hdr.hidden = false;
 
     $('hTitle').textContent = DB.title;
-    $('hSub').textContent = tab === 'today'
-      ? md(dayCur) + ' (' + dow(dayCur) + ')' + (dayCur === today() ? ' · 오늘' : '')
-      : weekCur + '주차';
-    $('tabToday').setAttribute('aria-selected', tab === 'today');
-    $('tabWeek').setAttribute('aria-selected', tab === 'week');
+    $('hSub').textContent = weekCur + '주차';
 
     var html = '';
     var ex = nextExam();
@@ -140,59 +148,11 @@
         + '<span>' + esc(ex.courseId) + ' · ' + md(ex.date) + '(' + dow(ex.date) + ') ' + ex.start + '</span></span>'
         + '<span class="chev">&rsaquo;</span></button>';
     }
-    html += tab === 'today' ? viewToday() : viewWeek();
+    html += viewWeek();
     main.innerHTML = html;
 
     if ($('ddayBtn')) $('ddayBtn').onclick = showExams;
     wire();
-    var cur = main.querySelector('.lesson.now, .blk.now');
-    if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'center' });
-  }
-
-  /* ---------- 오늘 ---------- */
-  function viewToday() {
-    var t = today(), isToday = dayCur === t, now = nowHM();
-    var evs = DB.events.filter(function (e) { return e.date === dayCur; });
-
-    var h = '<div class="daynav">'
-      + '<button class="arw" data-day="-1">&lsaquo;</button>'
-      + '<b>' + md(dayCur) + ' (' + dow(dayCur) + ')</b>'
-      + '<button class="arw" data-day="1">&rsaquo;</button></div>';
-
-    if (!evs.length) {
-      var nd = classDays().filter(function (d) { return d > dayCur; })[0];
-      return h + '<div class="empty">수업 없음'
-        + (nd ? '<br><br><button class="btn ghost" data-goto="' + nd + '">다음 수업일 ' + md(nd) + '(' + dow(nd) + ') 보기</button>' : '')
-        + '</div>';
-    }
-
-    // 하루 진행률: 첫 수업 시작 ~ 마지막 수업 종료
-    if (isToday) {
-      var a = mins(evs[0].start), b = mins(evs[evs.length - 1].end), c = mins(now);
-      var pct = Math.max(0, Math.min(100, Math.round((c - a) / (b - a) * 100)));
-      var left = evs.filter(function (e) { return e.end > now; }).length;
-      h += '<div class="prog"><div class="bar"><i style="width:' + pct + '%"></i></div>'
-        + '<span>' + (left ? '남은 수업 ' + left + '개' : '오늘 일정 종료') + '</span></div>';
-    }
-
-    evs.forEach(function (e, i) {
-      var c = colorOf(e.courseId);
-      var isNow = isToday && e.start <= now && now < e.end;
-      var soon = isToday && !isNow && e.start > now;
-      h += '<button class="lesson' + (e.isExam ? ' exam' : '') + (isNow ? ' now' : '') + '" data-ev="' + i + '">'
-        + '<span class="bar" style="background:' + c + '"></span>'
-        + '<span class="tm">' + e.start + '<br>' + e.end + '</span>'
-        + '<span class="bd"><span class="nm">'
-        + (isNow ? '<span class="tag now">지금</span>' : '')
-        + (e.isExam ? '<span class="tag exam">' + esc(e.kind) + '</span>' : '')
-        + (e.kind === '실습' || e.kind === 'PBL' ? '<span class="tag lab">' + esc(e.kind) + '</span>' : '')
-        + esc(e.title) + '</span>'
-        + '<span class="mt">' + esc(e.courseId || '') + (e.prof ? ' · ' + esc(e.prof) : '')
-        + (isNow ? ' · ' + (mins(e.end) - mins(now)) + '분 남음' : '')
-        + (soon && i && !(isToday && evs[i - 1].end > now) ? '' : '')
-        + '</span></span></button>';
-    });
-    return h;
   }
 
   /* ---------- 주간 ---------- */
@@ -202,7 +162,7 @@
     var L = live();
     var cols = all.filter(function (d) { return L.days[dowOf(d)]; });
 
-    // 학기 전체를 한 줄로: 시험 있는 주는 점으로 표시
+    // 학기 전체를 한 줄로: 시험 있는 주는 점으로 표시. 시간표 아래에 놓는다.
     var strip = '<div class="strip" id="strip">';
     ns.forEach(function (w) {
       var ex = weekExams(w).length;
@@ -212,7 +172,7 @@
     });
     strip += '</div>';
 
-    var h = strip + '<div class="wknav">'
+    var h = '<div class="wknav">'
       + '<button class="arw" data-wk="-1"' + (ns.indexOf(weekCur) <= 0 ? ' disabled' : '') + '>&lsaquo;</button>'
       + '<b>' + weekCur + '주차 · ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]) + '</b>'
       + '<button class="arw" data-wk="1"' + (ns.indexOf(weekCur) >= ns.length - 1 ? ' disabled' : '') + '>&rsaquo;</button></div>';
@@ -244,7 +204,7 @@
         if (e.date !== d) return;
         var top = (mins(e.start) - R.lo) * PPM;
         var hgt = (mins(e.end) - mins(e.start)) * PPM;
-        var c = e.isExam ? '#c9736c' : colorOf(e.courseId);
+        var c = e.isExam ? EXAM : colorOf(e.courseId);
         var isNow = d === t && e.start <= now && now < e.end;
         h += '<button class="ev' + (isNow ? ' now' : '') + '" data-ev="' + idx + '"'
           + ' style="top:' + top + 'px;height:' + (hgt - 1) + 'px;'
@@ -262,123 +222,7 @@
       h += '<div class="nowline" style="top:' + ((nm - R.lo) * PPM) + 'px"></div>';
     }
 
-    return h + '</div></div></div>'
-      + '<button class="btn ghost" id="shot">이번 주 시간표 이미지로 저장</button>';
-  }
-
-  /* ---------- 주간 시간표를 이미지로 (에타에서 가장 많이 쓰이는 기능) ---------- */
-  function wrap(ctx, text, w, max) {
-    var out = [], line = '';
-    for (var i = 0; i < text.length; i++) {
-      var t = line + text[i];
-      if (ctx.measureText(t).width > w && line) { out.push(line); line = text[i]; }
-      else line = t;
-      if (out.length >= max) return out;
-    }
-    if (line) out.push(line);
-    return out.slice(0, max);
-  }
-
-  function exportImage() {
-    var all = DB.weeks[weekCur], L = live();
-    var cols = all.filter(function (d) { return L.days[dowOf(d)]; });
-
-    var R = weekRange(cols), SCALE = 1.55;          // 1분당 px (화면 0.82의 약 2배)
-    var PAD = 44, HR = 62, HEAD = 172, FOOT = 92;
-    var W = 1080, GW = W - PAD * 2 - HR;
-    var CW = GW / cols.length;
-    var GH = (R.hi - R.lo) * SCALE;
-    var H = HEAD + 54 + GH + FOOT + PAD;
-
-    var cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    var x = cv.getContext('2d');
-    // roundRect는 Safari 16.4 미만에 없다. 모서리만 포기하고 계속 그린다.
-    if (!x.roundRect) x.roundRect = function (a, b, c, d) { this.rect(a, b, c, d); };
-    var FONT = '"Noto Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
-
-    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
-
-    // 헤더
-    x.fillStyle = '#9aa3a9'; x.font = '400 26px ' + FONT;
-    x.fillText(DB.title, PAD, PAD + 30);
-    x.fillStyle = '#2f3438'; x.font = '700 44px ' + FONT;
-    x.fillText(weekCur + '주차  ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]), PAD, PAD + 88);
-
-    // 요일 헤더
-    var gy = HEAD;
-    x.textAlign = 'center';
-    cols.forEach(function (d, i) {
-      x.fillStyle = '#8d969c'; x.font = '500 24px ' + FONT;
-      x.fillText(dow(d), PAD + HR + CW * i + CW / 2, gy + 34);
-    });
-    x.textAlign = 'left';
-
-    // 정시 눈금과 세로 구분선
-    var gy0 = gy + 54;
-    x.strokeStyle = '#eceff1'; x.lineWidth = 1;
-    for (var m = R.lo; m <= R.hi; m += 60) {
-      var ly = gy0 + (m - R.lo) * SCALE;
-      x.beginPath(); x.moveTo(PAD + HR, ly); x.lineTo(W - PAD, ly); x.stroke();
-      if (m === R.hi) continue;
-      var hh = m / 60;
-      x.fillStyle = '#a8b0b5'; x.font = '400 20px ' + FONT;
-      x.textAlign = 'right'; x.fillText(hh > 12 ? hh - 12 : hh, PAD + HR - 14, ly + 25); x.textAlign = 'left';
-    }
-    cols.forEach(function (_, di) {
-      var lx = PAD + HR + CW * di;
-      x.beginPath(); x.moveTo(lx, gy0); x.lineTo(lx, gy0 + GH); x.stroke();
-    });
-
-    // 블록: 높이가 실제 수업 길이에 비례
-    DB.events.forEach(function (e) {
-      var di = cols.indexOf(e.date);
-      if (di < 0) return;
-      var bx = PAD + HR + CW * di + 3, bw = CW - 6;
-      var y = gy0 + (mins(e.start) - R.lo) * SCALE;
-      var bh = (mins(e.end) - mins(e.start)) * SCALE - 4;
-      x.fillStyle = e.isExam ? '#c9736c' : colorOf(e.courseId);
-      x.beginPath(); x.roundRect(bx, y, bw, bh, 3); x.fill();
-
-      var ty = y + 28;
-      x.fillStyle = '#ffffff';
-      if (e.kind !== '강의') {
-        x.font = '400 18px ' + FONT; x.globalAlpha = 0.85;
-        x.fillText(e.kind, bx + 11, ty); x.globalAlpha = 1; ty += 24;
-      }
-      x.font = '500 21px ' + FONT;
-      var room = Math.max(1, Math.floor((bh - (ty - y) + 14) / 26));
-      wrap(x, e.title, bw - 22, room).forEach(function (ln) {
-        x.fillText(ln, bx + 11, ty); ty += 26;
-      });
-      if (e.prof && ty < y + bh - 4) {
-        x.font = '400 18px ' + FONT; x.globalAlpha = 0.85;
-        x.fillText(e.prof, bx + 11, ty); x.globalAlpha = 1;
-      }
-    });
-
-    // 푸터: 다음 시험
-    var ex = nextExam(), fy = H - PAD - 30;
-    if (ex) {
-      var n = diffDays(today(), ex.date);
-      x.fillStyle = '#c9736c'; x.font = '700 28px ' + FONT;
-      var tag = n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : '';
-      x.fillText(tag, PAD, fy);
-      x.fillStyle = '#7d868c'; x.font = '400 24px ' + FONT;
-      x.fillText(ex.title + '  ·  ' + md(ex.date) + '(' + dow(ex.date) + ')', PAD + x.measureText(tag).width + 60, fy);
-    }
-
-    var name = weekCur + '주차_시간표.png';
-    cv.toBlob(function (blob) {
-      var file = new File([blob], name, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: weekCur + '주차 시간표' }).catch(function () {});
-      } else {
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = name; a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-      }
-    }, 'image/png');
+    return h + '</div></div></div>' + strip;
   }
 
   /* ---------- 이벤트 연결 ---------- */
@@ -389,25 +233,11 @@
 
   function wire() {
     var q = function (sel, fn) { Array.prototype.forEach.call(main.querySelectorAll(sel), fn); };
-    q('[data-day]', function (b) { b.onclick = function () { dayCur = shift(dayCur, +b.dataset.day); render(); }; });
-    q('[data-goto]', function (b) { b.onclick = function () { dayCur = b.dataset.goto; render(); }; });
     q('[data-wk]', function (b) { b.onclick = function () { gotoWeek(+b.dataset.wk); }; });
     q('[data-week]', function (b) { b.onclick = function () { weekCur = +b.dataset.week; render(); }; });
     q('[data-ev]', function (b) {
-      b.onclick = function () {
-        var e = tab === 'today'
-          ? DB.events.filter(function (x) { return x.date === dayCur; })[+b.dataset.ev]
-          : DB.events[+b.dataset.ev];
-        showDetail(e);
-      };
+      b.onclick = function () { showDetail(DB.events[+b.dataset.ev]); };
     });
-    if ($('shot')) $('shot').onclick = function () {
-      $('shot').textContent = '만드는 중...';
-      setTimeout(function () {
-        try { exportImage(); } catch (e) { alert('이미지를 만들지 못했습니다.'); }
-        $('shot').textContent = '이번 주 시간표 이미지로 저장';
-      }, 30);
-    };
     var on = main.querySelector('.strip .wk.on');
     if (on) on.parentNode.scrollLeft = on.offsetLeft - on.parentNode.clientWidth / 2 + on.clientWidth / 2;
   }
@@ -424,7 +254,7 @@
     var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) < 55 || Math.abs(dy) > 45) return;
     var dir = dx < 0 ? 1 : -1;
-    if (tab === 'today') { dayCur = shift(dayCur, dir); render(); } else gotoWeek(dir);
+    gotoWeek(dir);
   }, { passive: true });
 
   /* ---------- 시트 화면 ---------- */
@@ -452,7 +282,7 @@
     });
     openSheet(h);
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-jump]'), function (b) {
-      b.onclick = function () { dayCur = b.dataset.jump; tab = 'today'; closeSheet(); render(); };
+      b.onclick = function () { weekCur = weekOf(b.dataset.jump); closeSheet(); render(); };
     });
   }
 
@@ -480,7 +310,7 @@
     });
     $('sReplace').onclick = function () { closeSheet(); $('file').click(); };
     $('sReset').onclick = function () {
-      localStorage.removeItem(KEY); DB = null; _live = null; closeSheet(); hdr.hidden = true; renderUpload();
+      localStorage.removeItem(KEY); DB = null; _live = null; _cmap = null; closeSheet(); hdr.hidden = true; renderUpload();
     };
   }
 
@@ -516,8 +346,8 @@
           } catch (e2) {}
         });
         if (!best || !best.events.length) throw new Error('시간표 형식을 인식하지 못했습니다.');
-        DB = best; _live = null; save(DB);
-        dayCur = today(); weekCur = weekOf(dayCur); tab = 'today';
+        DB = best; _live = null; _cmap = null; save(DB);
+        weekCur = weekOf(today());
         render();
       } catch (e3) {
         renderUpload(e3.message || '파일을 읽지 못했습니다.');
@@ -529,15 +359,13 @@
   };
 
   /* ---------- 부팅 ---------- */
-  $('tabToday').onclick = function () { tab = 'today'; render(); };
-  $('tabWeek').onclick = function () { tab = 'week'; render(); };
   $('gear').onclick = showSettings;
   document.addEventListener('visibilitychange', function () { if (!document.hidden && DB) render(); });
 
   function boot(d) {
-    DB = d; _live = null;
+    DB = d; _live = null; _cmap = null;
     if (!DB) return renderUpload();
-    dayCur = today(); weekCur = weekOf(dayCur);
+    weekCur = weekOf(today());
     render();
   }
 

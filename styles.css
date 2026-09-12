@@ -34,20 +34,13 @@ header {
   border-bottom: 1px solid var(--line);
 }
 .title { font-size: 12px; color: var(--faint); }
-.subtitle { font-size: 17px; font-weight: 700; margin: 1px 0 9px; letter-spacing: -0.01em; }
-
-.tabs { display: flex; gap: 3px; background: var(--surface-2); padding: 3px;
-        border-radius: 6px; margin-bottom: 10px; }
-.tabs button { flex: 1; padding: 7px 0; border-radius: 4px; font-size: 13px;
-               font-weight: 500; color: var(--muted); }
-.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text);
-               box-shadow: var(--card); }
+.subtitle { font-size: 17px; font-weight: 700; margin: 1px 0 11px; letter-spacing: -0.01em; }
 
 main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 
 .dday {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  background: var(--danger-soft); border: 1px solid var(--danger);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--card);
   border-radius: var(--radius); padding: 11px 13px; margin-bottom: 12px; text-align: left;
 }
 .dday .n { font-size: 22px; font-weight: 800; color: var(--danger);
@@ -58,29 +51,9 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 .dday .t span { font-size: 12px; color: var(--muted); }
 .dday .chev { color: var(--muted); font-size: 18px; }
 
-.daynav, .wknav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.daynav b, .wknav b { font-size: 15px; font-weight: 650; }
+.wknav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.wknav b { font-size: 15px; font-weight: 650; }
 .arw { padding: 5px 12px; border-radius: 6px; background: var(--surface-2); font-size: 15px; color: var(--muted); }
-
-.lesson { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--line);
-          border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; width: 100%;
-          text-align: left; align-items: flex-start; box-shadow: var(--card); }
-.lesson .bar { width: 4px; align-self: stretch; border-radius: 2px; flex: none; }
-.lesson .tm { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums;
-              flex: none; width: 42px; padding-top: 1px; }
-.lesson .bd { flex: 1; min-width: 0; }
-.lesson .nm { font-size: 14px; font-weight: 700; }
-.lesson .mt { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.lesson.exam { border-color: var(--danger); background: var(--danger-soft); }
-.lesson.now { box-shadow: 0 0 0 2px var(--accent); }
-
-.tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 5px;
-       border-radius: 3px; margin-right: 5px; }
-.tag.exam { background: var(--danger); color: #fff; }
-.tag.lab { background: var(--accent); color: #fff; }
-.tag.now { background: var(--text); color: var(--bg); }
-
-.empty { text-align: center; color: var(--muted); padding: 44px 12px; font-size: 14px; }
 
 /* 시계 눈금 주간표: 왼쪽 시간축 + 요일 열, 블록 높이가 수업 길이에 비례 */
 .tthead { display: flex; padding: 7px 0 6px; border-bottom: 1px solid var(--bg); }
@@ -129,7 +102,7 @@ body[data-fs="l"] { --blk: 13.5px; }
 
 /* 학기 전체 주차 스트립 (시험 있는 주는 점) */
 .strip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
-         margin: 0 -14px 10px; padding: 0 14px 2px; }
+         margin: 12px -14px 0; padding: 0 14px 2px; }
 .strip::-webkit-scrollbar { display: none; }
 .strip .wk { position: relative; flex: none; min-width: 30px; padding: 6px 0; border-radius: 4px;
              background: var(--surface-2); font-size: 12px; font-weight: 500; color: var(--muted);
@@ -139,12 +112,6 @@ body[data-fs="l"] { --blk: 13.5px; }
 .strip .wk i { position: absolute; top: 4px; right: 5px; width: 5px; height: 5px;
                border-radius: 50%; background: var(--danger); }
 .strip .wk.on i { background: #fff; }
-
-/* 하루 진행률 */
-.prog { display: flex; align-items: center; gap: 9px; margin: 0 2px 11px; }
-.prog .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
-.prog .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
-.prog span { font-size: 11.5px; color: var(--faint); flex: none; }
 
 .scrim { position: fixed; inset: 0; background: rgba(8,10,18,0.5); z-index: 40;
          opacity: 0; pointer-events: none; transition: opacity 0.18s; }
