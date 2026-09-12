@@ -91,25 +91,35 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 
 .empty { text-align: center; color: var(--muted); padding: 44px 12px; font-size: 14px; }
 
-table.grid { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
-table.grid th { font-size: 11px; font-weight: 600; color: var(--muted); padding: 2px 0 5px; }
-table.grid th.today { color: var(--accent); }
-table.grid th small { display: block; font-size: 10px; font-weight: 500; opacity: 0.8; }
-table.grid td.hr { width: 22px; font-size: 10px; color: var(--muted); text-align: center;
-                   vertical-align: top; padding-top: 4px; font-variant-numeric: tabular-nums; }
-table.grid td.slot { background: var(--surface-2); border-radius: 7px; height: 40px; opacity: 0.4; }
-table.grid td.slot.td { opacity: 0.75; }
-table.grid td { padding: 0; }
-/* 이번 주에 아무 일정도 없는 교시는 얇게 접는다 */
-table.grid tr.thin td { height: 13px; }
-table.grid tr.thin td.hr { font-size: 9px; padding-top: 1px; opacity: 0.6; }
-table.grid tr.thin td.slot { height: 13px; opacity: 0.22; }
-.blk { display: block; width: 100%; height: 100%; min-height: 40px; border-radius: 7px;
-       padding: 5px 5px; font-size: var(--blk); line-height: 1.22; font-weight: 600; text-align: left;
-       overflow: hidden; letter-spacing: -0.02em; word-break: break-all; }
-.blk .k { font-size: calc(var(--blk) - 1.5px); font-weight: 800; display: block; opacity: 0.9; }
-.blk .p { display: block; font-weight: 500; opacity: 0.72; margin-top: 2px; }
-.blk.now { box-shadow: 0 0 0 2px var(--text); }
+/* 시계 눈금 주간표: 왼쪽 시간축 + 요일 열, 블록 높이가 수업 길이에 비례 */
+.tthead { display: flex; margin-bottom: 4px; }
+.tthead span { width: 22px; flex: none; }
+.tthead b { flex: 1; text-align: center; font-size: 11.5px; font-weight: 650; color: var(--muted); }
+.tthead b.td { color: var(--accent); }
+.tthead b i { display: block; font-style: normal; font-size: 10px; font-weight: 500; opacity: 0.75; }
+
+.tt { position: relative; display: flex; }
+.tt .axis { width: 22px; flex: none; position: relative; }
+.tt .axis u { position: absolute; right: 5px; transform: translateY(-50%); text-decoration: none;
+              font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tt .body { flex: 1; position: relative; display: flex;
+            border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.tt hr { position: absolute; left: 0; right: 0; margin: 0; border: 0;
+         border-top: 1px solid var(--line); opacity: 0.6; }
+.tt .col { flex: 1; position: relative; border-right: 1px solid var(--line); min-width: 0; }
+.tt .col.td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+.tt .ev { position: absolute; left: 1px; right: 1px; border-radius: 5px; padding: 3px 4px;
+          text-align: left; overflow: hidden; font-size: var(--blk); line-height: 1.2;
+          letter-spacing: -0.02em; word-break: break-all; }
+.tt .ev b { font-weight: 650; }
+.tt .ev i { display: block; font-style: normal; font-weight: 500; opacity: 0.72; }
+.tt .ev i.k { font-weight: 800; opacity: 0.95; font-size: calc(var(--blk) - 1.5px); }
+.tt .ev.now { box-shadow: 0 0 0 2px var(--text); }
+.tt .nowline { position: absolute; left: 22px; right: 0; height: 0;
+               border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
+.tt .nowline::before { content: ''; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px;
+                       border-radius: 50%; background: var(--danger); }
 
 /* 블록 글자 크기 (설정에서 변경) */
 :root { --blk: 10.5px; }

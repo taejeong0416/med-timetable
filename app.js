@@ -106,6 +106,19 @@
     return DB.events.filter(function (e) { return e.isExam && ds.indexOf(e.date) >= 0; });
   }
 
+  /* 그 주 수업이 걸친 시간대를 정시 단위로 스냅한다.
+     교시 칸 대신 시계 눈금을 쓰므로 공강과 연강 길이가 그대로 보인다. */
+  var PPM = 0.82;
+  function weekRange(cols) {
+    var lo = 1e9, hi = -1;
+    DB.events.forEach(function (e) {
+      if (cols.indexOf(e.date) < 0) return;
+      lo = Math.min(lo, mins(e.start)); hi = Math.max(hi, mins(e.end));
+    });
+    if (hi < 0) { lo = 9 * 60; hi = 17 * 60; }
+    return { lo: Math.floor(lo / 60) * 60, hi: Math.ceil(hi / 60) * 60 };
+  }
+
   /* ---------- 렌더 ---------- */
   function render() {
     if (!DB) return renderUpload();
@@ -205,46 +218,51 @@
       + '<b>' + weekCur + '주차 · ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]) + '</b>'
       + '<button class="arw" data-wk="1"' + (ns.indexOf(weekCur) >= ns.length - 1 ? ' disabled' : '') + '>&rsaquo;</button></div>';
 
-    var start = {}, covered = {};
-    DB.events.forEach(function (e, idx) {
-      var di = cols.indexOf(e.date);
-      if (di < 0) return;
-      start[di + '|' + e.periods[0]] = idx;
-      for (var p = e.periods[0]; p <= e.periods[1]; p++) covered[di + '|' + p] = 1;
-    });
+    // 시계 눈금 기준 배치. 블록 높이가 실제 수업 길이에 비례한다.
+    var R = weekRange(cols), H = (R.hi - R.lo) * PPM;
 
-    h += '<table class="grid"><thead><tr><th></th>';
+    h += '<div class="tthead"><span></span>';
     cols.forEach(function (d) {
-      h += '<th class="' + (d === t ? 'today' : '') + '">' + dow(d) + '<small>' + md(d) + '</small></th>';
+      h += '<b class="' + (d === t ? 'td' : '') + '">' + dow(d) + '<i>' + md(d) + '</i></b>';
     });
-    h += '</tr></thead><tbody>';
+    h += '</div><div class="tt" style="height:' + H + 'px">';
 
-    L.periods.forEach(function (p) {
-      // 이번 주에 아무것도 없는 교시는 얇게 접는다 (점심시간 등)
-      var busy = cols.some(function (_, di) { return covered[di + '|' + p.no]; });
-      h += '<tr class="' + (busy ? '' : 'thin') + '"><td class="hr">'
-        + (busy ? p.start.slice(0, 2) + '<br>' + p.start.slice(3) : p.start.slice(0, 2)) + '</td>';
-      cols.forEach(function (d, di) {
-        var k = di + '|' + p.no;
-        if (start[k] !== undefined) {
-          var e = DB.events[start[k]];
-          var span = e.periods[1] - e.periods[0] + 1;
-          var c = colorOf(e.courseId);
-          var isNow = d === t && e.start <= now && now < e.end;
-          var style = e.isExam ? 'background:var(--danger);color:#fff'
-                               : 'background:' + c.bg + ';color:' + c.fg;
-          h += '<td rowspan="' + span + '"><button class="blk' + (isNow ? ' now' : '') + '" style="' + style + '" data-ev="' + start[k] + '">'
-            + (e.kind !== '강의' ? '<span class="k">' + esc(e.kind) + '</span>' : '')
-            + esc(e.title)
-            + (PREF.prof && e.prof && span > 1 ? '<span class="p">' + esc(e.prof) + '</span>' : '')
-            + '</button></td>';
-        } else if (!covered[k]) {
-          h += '<td class="slot' + (d === t ? ' td' : '') + '"></td>';
-        }
+    h += '<div class="axis">';
+    for (var m = R.lo; m <= R.hi; m += 60) {
+      h += '<u style="top:' + ((m - R.lo) * PPM) + 'px">' + (m / 60) + '</u>';
+    }
+    h += '</div><div class="body">';
+
+    for (var m2 = R.lo; m2 <= R.hi; m2 += 60) {
+      h += '<hr style="top:' + ((m2 - R.lo) * PPM) + 'px">';
+    }
+
+    cols.forEach(function (d) {
+      h += '<div class="col' + (d === t ? ' td' : '') + '">';
+      DB.events.forEach(function (e, idx) {
+        if (e.date !== d) return;
+        var top = (mins(e.start) - R.lo) * PPM;
+        var hgt = (mins(e.end) - mins(e.start)) * PPM;
+        var c = colorOf(e.courseId);
+        var isNow = d === t && e.start <= now && now < e.end;
+        var style = e.isExam ? 'background:var(--danger);color:#fff'
+                             : 'background:' + c.bg + ';color:' + c.fg;
+        h += '<button class="ev' + (isNow ? ' now' : '') + '" data-ev="' + idx + '"'
+          + ' style="top:' + top + 'px;height:' + (hgt - 2) + 'px;' + style + '">'
+          + (e.kind !== '강의' ? '<i class="k">' + esc(e.kind) + '</i>' : '')
+          + '<b>' + esc(e.title) + '</b>'
+          + (PREF.prof && e.prof && hgt > 46 ? '<i>' + esc(e.prof) + '</i>' : '')
+          + '</button>';
       });
-      h += '</tr>';
+      h += '</div>';
     });
-    return h + '</tbody></table>'
+
+    var nm = mins(now);
+    if (cols.indexOf(t) >= 0 && nm >= R.lo && nm <= R.hi) {
+      h += '<div class="nowline" style="top:' + ((nm - R.lo) * PPM) + 'px"></div>';
+    }
+
+    return h + '</div></div>'
       + '<button class="btn ghost" id="shot">이번 주 시간표 이미지로 저장</button>';
   }
 
@@ -265,21 +283,12 @@
     var all = DB.weeks[weekCur], L = live();
     var cols = all.filter(function (d) { return L.days[dowOf(d)]; });
 
-    var start = {}, covered = {};
-    DB.events.forEach(function (e) {
-      var di = cols.indexOf(e.date);
-      if (di < 0) return;
-      start[di + '|' + e.periods[0]] = e;
-      for (var p = e.periods[0]; p <= e.periods[1]; p++) covered[di + '|' + p] = 1;
-    });
-    var rows = L.periods.filter(function (p) {
-      return cols.some(function (_, di) { return covered[di + '|' + p.no]; });
-    });
-
-    var PAD = 44, HR = 62, HEAD = 172, ROW = 96, FOOT = 92;
+    var R = weekRange(cols), SCALE = 1.55;          // 1분당 px (화면 0.82의 약 2배)
+    var PAD = 44, HR = 62, HEAD = 172, FOOT = 92;
     var W = 1080, GW = W - PAD * 2 - HR;
     var CW = GW / cols.length;
-    var H = HEAD + 54 + rows.length * ROW + FOOT + PAD;
+    var GH = (R.hi - R.lo) * SCALE;
+    var H = HEAD + 54 + GH + FOOT + PAD;
 
     var cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
@@ -305,42 +314,47 @@
     });
     x.textAlign = 'left';
 
-    // 그리드
+    // 정시 눈금과 세로 구분선
     var gy0 = gy + 54;
-    rows.forEach(function (p, ri) {
-      var y = gy0 + ri * ROW;
+    x.strokeStyle = '#e4e8f0'; x.lineWidth = 1;
+    for (var m = R.lo; m <= R.hi; m += 60) {
+      var ly = gy0 + (m - R.lo) * SCALE;
+      x.beginPath(); x.moveTo(PAD + HR, ly); x.lineTo(W - PAD, ly); x.stroke();
       x.fillStyle = '#9aa1bb'; x.font = '500 20px ' + FONT;
-      x.fillText(p.start, PAD, y + 30);
-      cols.forEach(function (d, di) {
-        var k = di + '|' + p.no;
-        var bx = PAD + HR + CW * di + 3, bw = CW - 6;
-        if (start[k]) {
-          var e = start[k];
-          var ri2 = rows.findIndex(function (q) { return q.no === e.periods[1]; });
-          var bh = ((ri2 < 0 ? ri : ri2) - ri + 1) * ROW - 6;
-          var c = colorOf(e.courseId, true);
-          x.fillStyle = e.isExam ? '#c4344f' : c.bg;
-          x.beginPath(); x.roundRect(bx, y, bw, bh, 12); x.fill();
-          var ty = y + 30;
-          if (e.kind !== '강의') {
-            x.fillStyle = e.isExam ? '#ffd9e0' : c.fg;
-            x.font = '800 18px ' + FONT;
-            x.fillText(e.kind, bx + 12, ty); ty += 26;
-          }
-          x.fillStyle = e.isExam ? '#ffffff' : c.fg;
-          x.font = '600 21px ' + FONT;
-          wrap(x, e.title, bw - 24, Math.max(1, Math.floor((bh - (ty - y)) / 27))).forEach(function (ln) {
-            x.fillText(ln, bx + 12, ty); ty += 27;
-          });
-          if (e.prof && ty < y + bh - 6) {
-            x.font = '500 18px ' + FONT; x.globalAlpha = 0.75;
-            x.fillText(e.prof, bx + 12, ty); x.globalAlpha = 1;
-          }
-        } else if (!covered[k]) {
-          x.fillStyle = '#f2f4f9';
-          x.beginPath(); x.roundRect(bx, y, bw, ROW - 6, 12); x.fill();
-        }
+      x.textAlign = 'right'; x.fillText(m / 60, PAD + HR - 14, ly + 7); x.textAlign = 'left';
+    }
+    cols.forEach(function (_, di) {
+      var lx = PAD + HR + CW * di;
+      x.beginPath(); x.moveTo(lx, gy0); x.lineTo(lx, gy0 + GH); x.stroke();
+    });
+
+    // 블록: 높이가 실제 수업 길이에 비례
+    DB.events.forEach(function (e) {
+      var di = cols.indexOf(e.date);
+      if (di < 0) return;
+      var bx = PAD + HR + CW * di + 3, bw = CW - 6;
+      var y = gy0 + (mins(e.start) - R.lo) * SCALE;
+      var bh = (mins(e.end) - mins(e.start)) * SCALE - 4;
+      var c = colorOf(e.courseId, true);
+      x.fillStyle = e.isExam ? '#c4344f' : c.bg;
+      x.beginPath(); x.roundRect(bx, y, bw, bh, 10); x.fill();
+
+      var ty = y + 28;
+      if (e.kind !== '강의') {
+        x.fillStyle = e.isExam ? '#ffd9e0' : c.fg;
+        x.font = '800 18px ' + FONT;
+        x.fillText(e.kind, bx + 11, ty); ty += 25;
+      }
+      x.fillStyle = e.isExam ? '#ffffff' : c.fg;
+      x.font = '650 21px ' + FONT;
+      var room = Math.max(1, Math.floor((bh - (ty - y) + 14) / 26));
+      wrap(x, e.title, bw - 22, room).forEach(function (ln) {
+        x.fillText(ln, bx + 11, ty); ty += 26;
       });
+      if (e.prof && ty < y + bh - 4) {
+        x.font = '500 18px ' + FONT; x.globalAlpha = 0.72;
+        x.fillText(e.prof, bx + 11, ty); x.globalAlpha = 1;
+      }
     });
 
     // 푸터: 다음 시험
