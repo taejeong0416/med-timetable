@@ -7,6 +7,9 @@
                  '#d49a6f', '#74ada6', '#7cae8a'];
   var EXAM = '#c9736c';
   var OFF = '#a8b0b5';
+  /* 유형별 색: 시험류는 EXAM, 그 밖에 표에 없는 유형은 금색으로 떨어진다 */
+  var KINDC = { '강의': '#6f92b8', '실습': '#94ab74', 'PBL': '#8e81b5', '휴일': OFF };
+  var KINDETC = '#c4a765';
   var DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
   var DB = null;
@@ -55,13 +58,19 @@
   function colorOf(cid) {
     return cid ? courseColors()[cid] || OFF : OFF;   // 휴일·자율학습은 과목이 없다
   }
+  /* 어느 규칙이든 시험은 빨강을 독차지한다 */
+  function blockColor(e) {
+    if (e.isExam) return EXAM;
+    if (PREF.cmode === 'kind') return KINDC[e.kind] || KINDETC;
+    return colorOf(e.courseId);
+  }
 
   /* ---------- 저장 ---------- */
   function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
 
   /* 표시 설정: 블록이 좁아 정보를 다 못 넣으므로 무엇을 보일지 고르게 한다 */
-  var PREF = { fs: 'm', prof: true };
+  var PREF = { fs: 'm', prof: true, cmode: 'course' };
   try { Object.assign(PREF, JSON.parse(localStorage.getItem('medtt.pref') || '{}')); } catch (e) {}
   function savePref() {
     try { localStorage.setItem('medtt.pref', JSON.stringify(PREF)); } catch (e) {}
@@ -119,7 +128,14 @@
 
   /* 그 주 수업이 걸친 시간대를 정시 단위로 스냅한다.
      교시 칸 대신 시계 눈금을 쓰므로 공강과 연강 길이가 그대로 보인다. */
-  var PPM = 1;
+
+  /* 1분당 px. 정시 60px이 기준이되, 화면이 짧으면 한 주가 다 들어가게 줄인다.
+     0.62 아래로는 블록에 과목명 한 줄도 안 들어가 더 줄이지 않는다. */
+  var CHROME = 230;   // 헤더 + 주차 줄 + 요일 줄 + 주차 스트립 + 위아래 여백
+  function ppm(R) {
+    var avail = window.innerHeight - CHROME;
+    return Math.max(0.62, Math.min(1, avail / (R.hi - R.lo)));
+  }
   function weekRange(cols) {
     var lo = 1e9, hi = -1;
     DB.events.forEach(function (e) {
@@ -136,23 +152,27 @@
     hdr.hidden = false;
 
     $('hTitle').textContent = DB.title;
-    $('hSub').textContent = weekCur + '주차';
 
-    var html = '';
-    var ex = nextExam();
+    // 시험 D-day는 카드 대신 주차 옆 칩으로. 첫 화면에서 시간표가 잘리지 않는다.
+    var ex = nextExam(), chip = '';
     if (ex) {
       var n = diffDays(today(), ex.date);
-      html += '<button class="dday" id="ddayBtn">'
-        + '<span class="n">' + (n === 0 ? 'D-DAY' : 'D-' + n) + '</span>'
-        + '<span class="t"><b>' + esc(ex.title) + '</b>'
-        + '<span>' + esc(ex.courseId) + ' · ' + md(ex.date) + '(' + dow(ex.date) + ') ' + ex.start + '</span></span>'
-        + '<span class="chev">&rsaquo;</span></button>';
+      chip = '<button class="ddchip" id="ddayBtn">'
+        + '<b>' + (n === 0 ? 'D-DAY' : 'D-' + n) + '</b>'
+        + '<span>' + esc(ex.title) + '</span></button>';
     }
-    html += viewWeek();
-    main.innerHTML = html;
-
+    $('hSub').innerHTML = weekCur + '주차' + chip;
     if ($('ddayBtn')) $('ddayBtn').onclick = showExams;
+
+    main.innerHTML = viewWeek();
     wire();
+
+    // 2) 주 이동 방향으로 밀려 들어온다. 한 번 쓰고 지운다.
+    if (slide) {
+      var w = main.querySelector('.ttwrap');
+      if (w) w.classList.add('in-' + slide);
+      slide = null;
+    }
   }
 
   /* ---------- 주간 ---------- */
@@ -178,7 +198,7 @@
       + '<button class="arw" data-wk="1"' + (ns.indexOf(weekCur) >= ns.length - 1 ? ' disabled' : '') + '>&rsaquo;</button></div>';
 
     // 시계 눈금 기준 배치. 블록 높이가 실제 수업 길이에 비례한다.
-    var R = weekRange(cols), H = (R.hi - R.lo) * PPM;
+    var R = weekRange(cols), pm = ppm(R), H = (R.hi - R.lo) * pm;
 
     h += '<div class="ttwrap"><div class="tthead"><span></span>';
     cols.forEach(function (d) {
@@ -190,21 +210,21 @@
     h += '<div class="axis">';
     for (var m = R.lo; m < R.hi; m += 60) {
       var hh = m / 60;
-      h += '<u style="top:' + ((m - R.lo) * PPM) + 'px">' + (hh > 12 ? hh - 12 : hh) + '</u>';
+      h += '<u style="top:' + ((m - R.lo) * pm) + 'px">' + (hh > 12 ? hh - 12 : hh) + '</u>';
     }
     h += '</div><div class="body">';
 
     for (var m2 = R.lo; m2 <= R.hi; m2 += 60) {
-      h += '<hr style="top:' + ((m2 - R.lo) * PPM) + 'px">';
+      h += '<hr style="top:' + ((m2 - R.lo) * pm) + 'px">';
     }
 
     cols.forEach(function (d) {
       h += '<div class="col' + (d === t ? ' td' : '') + '">';
       DB.events.forEach(function (e, idx) {
         if (e.date !== d) return;
-        var top = (mins(e.start) - R.lo) * PPM;
-        var hgt = (mins(e.end) - mins(e.start)) * PPM;
-        var c = e.isExam ? EXAM : colorOf(e.courseId);
+        var top = (mins(e.start) - R.lo) * pm;
+        var hgt = (mins(e.end) - mins(e.start)) * pm;
+        var c = blockColor(e);
         var isNow = d === t && e.start <= now && now < e.end;
         h += '<button class="ev' + (isNow ? ' now' : '') + '" data-ev="' + idx + '"'
           + ' style="top:' + top + 'px;height:' + (hgt - 1) + 'px;'
@@ -219,22 +239,30 @@
 
     var nm = mins(now);
     if (cols.indexOf(t) >= 0 && nm >= R.lo && nm <= R.hi) {
-      h += '<div class="nowline" style="top:' + ((nm - R.lo) * PPM) + 'px"></div>';
+      h += '<div class="nowline" style="top:' + ((nm - R.lo) * pm) + 'px"></div>';
     }
 
     return h + '</div></div></div>' + strip;
   }
 
   /* ---------- 이벤트 연결 ---------- */
+  var slide = null;
   function gotoWeek(delta) {
     var ns = weekNos(), i = ns.indexOf(weekCur) + delta;
-    if (i >= 0 && i < ns.length) { weekCur = ns[i]; render(); }
+    if (i < 0 || i >= ns.length) return;
+    weekCur = ns[i]; slide = delta > 0 ? 'l' : 'r'; render();
   }
 
   function wire() {
     var q = function (sel, fn) { Array.prototype.forEach.call(main.querySelectorAll(sel), fn); };
     q('[data-wk]', function (b) { b.onclick = function () { gotoWeek(+b.dataset.wk); }; });
-    q('[data-week]', function (b) { b.onclick = function () { weekCur = +b.dataset.week; render(); }; });
+    q('[data-week]', function (b) {
+      b.onclick = function () {
+        var w = +b.dataset.week;
+        slide = w > weekCur ? 'l' : w < weekCur ? 'r' : null;
+        weekCur = w; render();
+      };
+    });
     q('[data-ev]', function (b) {
       b.onclick = function () { showDetail(DB.events[+b.dataset.ev]); };
     });
@@ -293,6 +321,9 @@
       + ['s', 'm', 'l'].map(function (v, i) {
           return '<button data-fs="' + v + '"' + (PREF.fs === v ? ' class="on"' : '') + '>' + ['작게', '보통', '크게'][i] + '</button>';
         }).join('') + '</div></div>'
+      + '<div class="opt"><span>블록 색</span><div class="seg" id="segC">'
+      + '<button data-cmode="course"' + (PREF.cmode === 'kind' ? '' : ' class="on"') + '>과목별</button>'
+      + '<button data-cmode="kind"' + (PREF.cmode === 'kind' ? ' class="on"' : '') + '>유형별</button></div></div>'
       + '<div class="opt"><span>주간표에 교수명</span><div class="seg" id="segProf">'
       + '<button data-prof="0"' + (PREF.prof ? '' : ' class="on"') + '>숨김</button>'
       + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
@@ -304,6 +335,9 @@
 
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-fs]'), function (b) {
       b.onclick = function () { PREF.fs = b.dataset.fs; savePref(); showSettings(); render(); };
+    });
+    Array.prototype.forEach.call(sheet.querySelectorAll('[data-cmode]'), function (b) {
+      b.onclick = function () { PREF.cmode = b.dataset.cmode; savePref(); showSettings(); render(); };
     });
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-prof]'), function (b) {
       b.onclick = function () { PREF.prof = b.dataset.prof === '1'; savePref(); showSettings(); render(); };
@@ -361,6 +395,11 @@
   /* ---------- 부팅 ---------- */
   $('gear').onclick = showSettings;
   document.addEventListener('visibilitychange', function () { if (!document.hidden && DB) render(); });
+  var rt = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(rt);
+    rt = setTimeout(function () { if (DB) render(); }, 150);
+  });
 
   function boot(d) {
     DB = d; _live = null; _cmap = null;

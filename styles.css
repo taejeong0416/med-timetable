@@ -34,22 +34,17 @@ header {
   border-bottom: 1px solid var(--line);
 }
 .title { font-size: 12px; color: var(--faint); }
-.subtitle { font-size: 17px; font-weight: 700; margin: 1px 0 11px; letter-spacing: -0.01em; }
+.subtitle { display: flex; align-items: baseline; gap: 10px; font-size: 17px; font-weight: 700;
+             margin: 1px 0 11px; letter-spacing: -0.01em; }
+.ddchip { display: flex; align-items: baseline; gap: 6px; margin-left: auto; min-width: 0;
+          padding: 2px 0 2px 8px; }
+.ddchip b { font-size: 13px; font-weight: 800; color: var(--danger);
+            font-variant-numeric: tabular-nums; flex: none; }
+.ddchip span { font-size: 12px; font-weight: 400; color: var(--muted);
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 
-.dday {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--card);
-  border-radius: var(--radius); padding: 11px 13px; margin-bottom: 12px; text-align: left;
-}
-.dday .n { font-size: 22px; font-weight: 800; color: var(--danger);
-           font-variant-numeric: tabular-nums; line-height: 1; }
-.dday .t { flex: 1; min-width: 0; }
-.dday .t b { display: block; font-size: 14px; font-weight: 650; overflow: hidden;
-             text-overflow: ellipsis; white-space: nowrap; }
-.dday .t span { font-size: 12px; color: var(--muted); }
-.dday .chev { color: var(--muted); font-size: 18px; }
 
 .wknav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .wknav b { font-size: 15px; font-weight: 650; }
@@ -88,6 +83,15 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
                border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
 .tt .nowline::before { content: ''; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px;
                        border-radius: 50%; background: var(--danger); }
+
+/* 주 이동: 넘긴 방향에서 밀려 들어온다 */
+@keyframes wkInL { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes wkInR { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+.ttwrap.in-l { animation: wkInL 0.22s cubic-bezier(0.3,0.9,0.3,1); }
+.ttwrap.in-r { animation: wkInR 0.22s cubic-bezier(0.3,0.9,0.3,1); }
+@media (prefers-reduced-motion: reduce) {
+  .ttwrap.in-l, .ttwrap.in-r { animation: none; }
+}
 
 /* 블록 글자 크기 (설정에서 변경) */
 :root { --blk: 12px; }
