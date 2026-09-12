@@ -31,13 +31,20 @@
     });
   }
 
-  /* ---------- 과정 색상 ---------- */
+  /* ---------- 과정 색상 ----------
+     주간표 블록은 진한 색 바탕에 흰 글씨, 오늘 목록의 세로 막대는 같은 색조를 쓴다.
+     명도는 흰 글씨 대비를 확보하려고 56%에 고정했다. */
   function colorOf(cid, light) {
     var i = DB.courses.indexOf(cid);
     var h = HUES[(i < 0 ? DB.courses.length : i) % HUES.length];
-    return (dark.matches && !light)
-      ? { bg: 'hsl(' + h + ' 30% 23%)', fg: 'hsl(' + h + ' 78% 85%)', bar: 'hsl(' + h + ' 62% 62%)' }
-      : { bg: 'hsl(' + h + ' 72% 93%)', fg: 'hsl(' + h + ' 54% 29%)', bar: 'hsl(' + h + ' 56% 52%)' };
+    var d = dark.matches && !light;
+    return {
+      bg: 'hsl(' + h + ' ' + (d ? 46 : 58) + '% ' + (d ? 47 : 56) + '%)',
+      fg: '#ffffff',
+      bar: 'hsl(' + h + ' 58% ' + (d ? 60 : 52) + '%)',
+      soft: d ? 'hsl(' + h + ' 30% 23%)' : 'hsl(' + h + ' 72% 93%)',
+      ink: d ? 'hsl(' + h + ' 78% 85%)' : 'hsl(' + h + ' 54% 29%)'
+    };
   }
 
   /* ---------- 저장 ---------- */
@@ -45,7 +52,7 @@
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
 
   /* 표시 설정: 블록이 좁아 정보를 다 못 넣으므로 무엇을 보일지 고르게 한다 */
-  var PREF = { fs: 'm', prof: false };
+  var PREF = { fs: 'm', prof: true };
   try { Object.assign(PREF, JSON.parse(localStorage.getItem('medtt.pref') || '{}')); } catch (e) {}
   function savePref() {
     try { localStorage.setItem('medtt.pref', JSON.stringify(PREF)); } catch (e) {}
@@ -221,15 +228,17 @@
     // 시계 눈금 기준 배치. 블록 높이가 실제 수업 길이에 비례한다.
     var R = weekRange(cols), H = (R.hi - R.lo) * PPM;
 
-    h += '<div class="tthead"><span></span>';
+    h += '<div class="ttwrap"><div class="tthead"><span></span>';
     cols.forEach(function (d) {
-      h += '<b class="' + (d === t ? 'td' : '') + '">' + dow(d) + '<i>' + md(d) + '</i></b>';
+      h += '<b class="' + (d === t ? 'td' : '') + '">' + dow(d) + '</b>';
     });
     h += '</div><div class="tt" style="height:' + H + 'px">';
 
+    // 시간축은 12시간제. 오후 1시를 13이라 쓰지 않는다.
     h += '<div class="axis">';
-    for (var m = R.lo; m <= R.hi; m += 60) {
-      h += '<u style="top:' + ((m - R.lo) * PPM) + 'px">' + (m / 60) + '</u>';
+    for (var m = R.lo; m < R.hi; m += 60) {
+      var hh = m / 60;
+      h += '<u style="top:' + ((m - R.lo) * PPM) + 'px">' + (hh > 12 ? hh - 12 : hh) + '</u>';
     }
     h += '</div><div class="body">';
 
@@ -262,7 +271,7 @@
       h += '<div class="nowline" style="top:' + ((nm - R.lo) * PPM) + 'px"></div>';
     }
 
-    return h + '</div></div>'
+    return h + '</div></div></div>'
       + '<button class="btn ghost" id="shot">이번 주 시간표 이미지로 저장</button>';
   }
 
@@ -310,7 +319,7 @@
     x.textAlign = 'center';
     cols.forEach(function (d, i) {
       x.fillStyle = '#6b7186'; x.font = '600 24px ' + FONT;
-      x.fillText(dow(d) + '  ' + md(d), PAD + HR + CW * i + CW / 2, gy + 34);
+      x.fillText(dow(d), PAD + HR + CW * i + CW / 2, gy + 34);
     });
     x.textAlign = 'left';
 
@@ -320,8 +329,10 @@
     for (var m = R.lo; m <= R.hi; m += 60) {
       var ly = gy0 + (m - R.lo) * SCALE;
       x.beginPath(); x.moveTo(PAD + HR, ly); x.lineTo(W - PAD, ly); x.stroke();
+      if (m === R.hi) continue;
+      var hh = m / 60;
       x.fillStyle = '#9aa1bb'; x.font = '500 20px ' + FONT;
-      x.textAlign = 'right'; x.fillText(m / 60, PAD + HR - 14, ly + 7); x.textAlign = 'left';
+      x.textAlign = 'right'; x.fillText(hh > 12 ? hh - 12 : hh, PAD + HR - 14, ly + 25); x.textAlign = 'left';
     }
     cols.forEach(function (_, di) {
       var lx = PAD + HR + CW * di;
@@ -337,22 +348,21 @@
       var bh = (mins(e.end) - mins(e.start)) * SCALE - 4;
       var c = colorOf(e.courseId, true);
       x.fillStyle = e.isExam ? '#c4344f' : c.bg;
-      x.beginPath(); x.roundRect(bx, y, bw, bh, 10); x.fill();
+      x.beginPath(); x.roundRect(bx, y, bw, bh, 6); x.fill();
 
       var ty = y + 28;
+      x.fillStyle = '#ffffff';
       if (e.kind !== '강의') {
-        x.fillStyle = e.isExam ? '#ffd9e0' : c.fg;
-        x.font = '800 18px ' + FONT;
-        x.fillText(e.kind, bx + 11, ty); ty += 25;
+        x.font = '800 18px ' + FONT; x.globalAlpha = 0.92;
+        x.fillText(e.kind, bx + 11, ty); x.globalAlpha = 1; ty += 24;
       }
-      x.fillStyle = e.isExam ? '#ffffff' : c.fg;
-      x.font = '650 21px ' + FONT;
+      x.font = '700 21px ' + FONT;
       var room = Math.max(1, Math.floor((bh - (ty - y) + 14) / 26));
       wrap(x, e.title, bw - 22, room).forEach(function (ln) {
         x.fillText(ln, bx + 11, ty); ty += 26;
       });
       if (e.prof && ty < y + bh - 4) {
-        x.font = '500 18px ' + FONT; x.globalAlpha = 0.72;
+        x.font = '500 18px ' + FONT; x.globalAlpha = 0.8;
         x.fillText(e.prof, bx + 11, ty); x.globalAlpha = 1;
       }
     });

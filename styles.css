@@ -92,31 +92,32 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 .empty { text-align: center; color: var(--muted); padding: 44px 12px; font-size: 14px; }
 
 /* 시계 눈금 주간표: 왼쪽 시간축 + 요일 열, 블록 높이가 수업 길이에 비례 */
-.tthead { display: flex; margin-bottom: 4px; }
-.tthead span { width: 22px; flex: none; }
-.tthead b { flex: 1; text-align: center; font-size: 11.5px; font-weight: 650; color: var(--muted); }
-.tthead b.td { color: var(--accent); }
-.tthead b i { display: block; font-style: normal; font-size: 10px; font-weight: 500; opacity: 0.75; }
+.tthead { display: flex; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.tthead span { width: 24px; flex: none; }
+.tthead b { flex: 1; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.tthead b.td { color: var(--accent); font-weight: 700; }
 
+.ttwrap { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
 .tt { position: relative; display: flex; }
-.tt .axis { width: 22px; flex: none; position: relative; }
-.tt .axis u { position: absolute; right: 5px; transform: translateY(-50%); text-decoration: none;
-              font-size: 9.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.tt .body { flex: 1; position: relative; display: flex;
-            border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.tt .axis { width: 24px; flex: none; position: relative; }
+.tt .axis u { position: absolute; right: 5px; text-decoration: none; padding-top: 3px;
+              font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tt .body { flex: 1; position: relative; display: flex; border-left: 1px solid var(--line); }
 .tt hr { position: absolute; left: 0; right: 0; margin: 0; border: 0;
-         border-top: 1px solid var(--line); opacity: 0.6; }
+         border-top: 1px solid var(--line); opacity: 0.55; }
 .tt .col { flex: 1; position: relative; border-right: 1px solid var(--line); min-width: 0; }
-.tt .col.td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.tt .col:last-child { border-right: 0; }
+.tt .col.td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 
-.tt .ev { position: absolute; left: 1px; right: 1px; border-radius: 5px; padding: 3px 4px;
-          text-align: left; overflow: hidden; font-size: var(--blk); line-height: 1.2;
+.tt .ev { position: absolute; left: 0; right: 1px; border-radius: 3px; padding: 3px 4px;
+          text-align: left; overflow: hidden; font-size: var(--blk); line-height: 1.18;
           letter-spacing: -0.02em; word-break: break-all; }
-.tt .ev b { font-weight: 650; }
-.tt .ev i { display: block; font-style: normal; font-weight: 500; opacity: 0.72; }
-.tt .ev i.k { font-weight: 800; opacity: 0.95; font-size: calc(var(--blk) - 1.5px); }
-.tt .ev.now { box-shadow: 0 0 0 2px var(--text); }
-.tt .nowline { position: absolute; left: 22px; right: 0; height: 0;
+.tt .ev b { font-weight: 700; }
+.tt .ev i { display: block; font-style: normal; font-weight: 500; opacity: 0.82;
+            font-size: calc(var(--blk) - 1px); margin-top: 1px; }
+.tt .ev i.k { font-weight: 800; opacity: 0.95; margin: 0 0 1px; }
+.tt .ev.now { box-shadow: inset 0 0 0 2px var(--text); }
+.tt .nowline { position: absolute; left: 24px; right: 0; height: 0;
                border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
 .tt .nowline::before { content: ''; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px;
                        border-radius: 50%; background: var(--danger); }
