@@ -1,36 +1,27 @@
 :root {
-  --bg: #f6f7fb;
+  --bg: #eceff1;
   --surface: #ffffff;
-  --surface-2: #eef0f6;
-  --line: #dfe3ed;
-  --text: #1a1d29;
-  --muted: #6b7186;
-  --accent: #4f57c4;
-  --danger: #c4344f;
-  --danger-soft: #fdeaee;
-  --radius: 14px;
+  --surface-2: #f2f4f5;
+  --line: #e3e7ea;
+  --grid: #f2f4f5;
+  --text: #2f3438;
+  --muted: #7d868c;
+  --faint: #a8b0b5;
+  --accent: #4a90d9;
+  --danger: #c9736c;
+  --danger-soft: #faeceb;
+  --radius: 6px;
+  --card: 0 1px 3px rgba(0,0,0,0.05);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #11131c;
-    --surface: #1a1d29;
-    --surface-2: #232736;
-    --line: #2e3345;
-    --text: #eceefa;
-    --muted: #9aa1bb;
-    --accent: #8b93ff;
-    --danger: #ff8098;
-    --danger-soft: #3a1f2a;
-  }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg); color: var(--text);
-  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
-        Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  font: 15px/1.45 "Noto Sans KR", Pretendard, -apple-system, BlinkMacSystemFont,
+        "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
 button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
@@ -42,15 +33,15 @@ header {
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
-.title { font-size: 13px; color: var(--muted); }
-.subtitle { font-size: 19px; font-weight: 700; margin: 1px 0 9px; letter-spacing: -0.02em; }
+.title { font-size: 12px; color: var(--faint); }
+.subtitle { font-size: 17px; font-weight: 700; margin: 1px 0 9px; letter-spacing: -0.01em; }
 
 .tabs { display: flex; gap: 3px; background: var(--surface-2); padding: 3px;
-        border-radius: 11px; margin-bottom: 10px; }
-.tabs button { flex: 1; padding: 7px 0; border-radius: 8px; font-size: 14px;
-               font-weight: 600; color: var(--muted); }
+        border-radius: 6px; margin-bottom: 10px; }
+.tabs button { flex: 1; padding: 7px 0; border-radius: 4px; font-size: 13px;
+               font-weight: 500; color: var(--muted); }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--text);
-               box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+               box-shadow: var(--card); }
 
 main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 
@@ -69,22 +60,22 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 
 .daynav, .wknav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .daynav b, .wknav b { font-size: 15px; font-weight: 650; }
-.arw { padding: 5px 12px; border-radius: 9px; background: var(--surface-2); font-size: 15px; }
+.arw { padding: 5px 12px; border-radius: 6px; background: var(--surface-2); font-size: 15px; color: var(--muted); }
 
-.lesson { display: flex; gap: 11px; background: var(--surface); border: 1px solid var(--line);
-          border-radius: var(--radius); padding: 11px 12px; margin-bottom: 8px; width: 100%;
-          text-align: left; align-items: flex-start; }
-.lesson .bar { width: 4px; align-self: stretch; border-radius: 3px; flex: none; }
-.lesson .tm { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums;
+.lesson { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--line);
+          border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; width: 100%;
+          text-align: left; align-items: flex-start; box-shadow: var(--card); }
+.lesson .bar { width: 4px; align-self: stretch; border-radius: 2px; flex: none; }
+.lesson .tm { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums;
               flex: none; width: 42px; padding-top: 1px; }
 .lesson .bd { flex: 1; min-width: 0; }
-.lesson .nm { font-size: 14.5px; font-weight: 600; }
-.lesson .mt { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.lesson .nm { font-size: 14px; font-weight: 700; }
+.lesson .mt { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .lesson.exam { border-color: var(--danger); background: var(--danger-soft); }
 .lesson.now { box-shadow: 0 0 0 2px var(--accent); }
 
 .tag { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 5px;
-       border-radius: 5px; margin-right: 5px; }
+       border-radius: 3px; margin-right: 5px; }
 .tag.exam { background: var(--danger); color: #fff; }
 .tag.lab { background: var(--accent); color: #fff; }
 .tag.now { background: var(--text); color: var(--bg); }
@@ -92,53 +83,56 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
 .empty { text-align: center; color: var(--muted); padding: 44px 12px; font-size: 14px; }
 
 /* 시계 눈금 주간표: 왼쪽 시간축 + 요일 열, 블록 높이가 수업 길이에 비례 */
-.tthead { display: flex; padding: 7px 0; border-bottom: 1px solid var(--line); }
-.tthead span { width: 24px; flex: none; }
-.tthead b { flex: 1; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.tthead { display: flex; padding: 7px 0 6px; border-bottom: 1px solid var(--bg); }
+.tthead span { width: 34px; flex: none; }
+.tthead b { flex: 1; text-align: center; font-size: 12px; font-weight: 500; color: #8d969c;
+            border-left: 1px solid var(--grid); }
 .tthead b.td { color: var(--accent); font-weight: 700; }
 
-.ttwrap { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.ttwrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+          background: var(--surface); box-shadow: var(--card); }
 .tt { position: relative; display: flex; }
-.tt .axis { width: 24px; flex: none; position: relative; }
-.tt .axis u { position: absolute; right: 5px; text-decoration: none; padding-top: 3px;
-              font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.tt .body { flex: 1; position: relative; display: flex; border-left: 1px solid var(--line); }
+.tt .axis { width: 34px; flex: none; position: relative; }
+.tt .axis u { position: absolute; right: 6px; text-decoration: none; padding-top: 4px;
+              font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.tt .body { flex: 1; position: relative; display: flex; border-left: 1px solid var(--grid); }
 .tt hr { position: absolute; left: 0; right: 0; margin: 0; border: 0;
-         border-top: 1px solid var(--line); opacity: 0.55; }
-.tt .col { flex: 1; position: relative; border-right: 1px solid var(--line); min-width: 0; }
+         border-top: 1px solid var(--grid); }
+.tt .col { flex: 1; position: relative; border-right: 1px solid var(--grid); min-width: 0; }
 .tt .col:last-child { border-right: 0; }
-.tt .col.td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.tt .col.td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 
-.tt .ev { position: absolute; left: 0; right: 1px; border-radius: 3px; padding: 3px 4px;
-          text-align: left; overflow: hidden; font-size: var(--blk); line-height: 1.18;
-          letter-spacing: -0.02em; word-break: break-all; }
-.tt .ev b { font-weight: 700; }
-.tt .ev i { display: block; font-style: normal; font-weight: 500; opacity: 0.82;
-            font-size: calc(var(--blk) - 1px); margin-top: 1px; }
-.tt .ev i.k { font-weight: 800; opacity: 0.95; margin: 0 0 1px; }
-.tt .ev.now { box-shadow: inset 0 0 0 2px var(--text); }
-.tt .nowline { position: absolute; left: 24px; right: 0; height: 0;
+.tt .ev { position: absolute; left: 1px; right: 1px; border-radius: 2px; padding: 5px 6px;
+          text-align: left; overflow: hidden; font-size: var(--blk); line-height: 1.25;
+          word-break: keep-all; overflow-wrap: anywhere;
+          transition: filter 0.12s, box-shadow 0.12s; }
+.tt .ev b { font-weight: 500; }
+.tt .ev i { display: block; font-style: normal; font-weight: 400; opacity: 0.85;
+            font-size: calc(var(--blk) - 2px); line-height: 1.2; margin-top: 2px; }
+.tt .ev i.k { opacity: 0.85; margin: 0 0 1px; }
+.tt .ev.now { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--c); z-index: 2; }
+.tt .nowline { position: absolute; left: 34px; right: 0; height: 0;
                border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
 .tt .nowline::before { content: ''; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px;
                        border-radius: 50%; background: var(--danger); }
 
 /* 블록 글자 크기 (설정에서 변경) */
-:root { --blk: 10.5px; }
-body[data-fs="s"] { --blk: 9.5px; }
-body[data-fs="l"] { --blk: 12px; }
+:root { --blk: 12px; }
+body[data-fs="s"] { --blk: 10.5px; }
+body[data-fs="l"] { --blk: 13.5px; }
 
 .opt { display: flex; align-items: center; justify-content: space-between; gap: 12px;
        padding: 11px 0; border-top: 1px solid var(--line); font-size: 14px; }
-.seg { display: flex; gap: 2px; background: var(--surface-2); padding: 2px; border-radius: 9px; flex: none; }
-.seg button { padding: 6px 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.seg { display: flex; gap: 2px; background: var(--surface-2); padding: 2px; border-radius: 6px; flex: none; }
+.seg button { padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--card); }
 
 /* 학기 전체 주차 스트립 (시험 있는 주는 점) */
 .strip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
          margin: 0 -14px 10px; padding: 0 14px 2px; }
 .strip::-webkit-scrollbar { display: none; }
-.strip .wk { position: relative; flex: none; min-width: 30px; padding: 6px 0; border-radius: 9px;
-             background: var(--surface-2); font-size: 12px; font-weight: 650; color: var(--muted);
+.strip .wk { position: relative; flex: none; min-width: 30px; padding: 6px 0; border-radius: 4px;
+             background: var(--surface-2); font-size: 12px; font-weight: 500; color: var(--muted);
              font-variant-numeric: tabular-nums; }
 .strip .wk.on { background: var(--accent); color: #fff; }
 .strip .wk.off { opacity: 0.34; }
@@ -148,9 +142,9 @@ body[data-fs="l"] { --blk: 12px; }
 
 /* 하루 진행률 */
 .prog { display: flex; align-items: center; gap: 9px; margin: 0 2px 11px; }
-.prog .bar { flex: 1; height: 4px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
-.prog .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
-.prog span { font-size: 11.5px; color: var(--muted); flex: none; }
+.prog .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.prog .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.prog span { font-size: 11.5px; color: var(--faint); flex: none; }
 
 .scrim { position: fixed; inset: 0; background: rgba(8,10,18,0.5); z-index: 40;
          opacity: 0; pointer-events: none; transition: opacity 0.18s; }
@@ -182,12 +176,13 @@ body[data-fs="l"] { --blk: 12px; }
 .hero h1 { font-size: 22px; margin: 0 0 7px; letter-spacing: -0.03em; }
 .hero p { color: var(--muted); font-size: 14px; margin: 0 auto; max-width: 300px; }
 .btn { display: block; width: 100%; background: var(--accent); color: #fff; font-weight: 650;
-       font-size: 15px; padding: 14px; border-radius: 13px; text-align: center; margin-top: 14px; }
+       font-size: 15px; padding: 14px; border-radius: var(--radius); text-align: center; margin-top: 14px; }
 .btn.ghost { background: var(--surface-2); color: var(--text); }
 .note { margin-top: 16px; background: var(--surface); border: 1px solid var(--line);
-        border-radius: var(--radius); padding: 13px 14px; font-size: 12.5px; color: var(--muted); }
+        border-radius: var(--radius); padding: 13px 14px; font-size: 12.5px; color: var(--muted);
+        box-shadow: var(--card); }
 .note b { color: var(--text); font-weight: 650; }
 .err { background: var(--danger-soft); border: 1px solid var(--danger);
-       color: var(--danger); border-radius: 11px; padding: 11px 13px; font-size: 13px; margin-top: 14px; }
+       color: var(--danger); border-radius: var(--radius); padding: 11px 13px; font-size: 13px; margin-top: 14px; }
 .gear { position: absolute; right: 10px; top: calc(var(--safe-t) + 6px); font-size: 16px;
         padding: 6px 8px; color: var(--muted); }

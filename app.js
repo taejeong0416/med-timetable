@@ -2,14 +2,14 @@
   'use strict';
 
   var KEY = 'medtt.v1';
-  var HUES = [245, 176, 34, 340, 152, 282, 205, 14];
+  var PALETTE = ['#c9736c', '#c4a765', '#6f92b8', '#d49a6f',
+                 '#94ab74', '#8e81b5', '#74ada6', '#7cae8a'];
   var DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
   var DB = null;
   var tab = 'today';
   var dayCur = null;
   var weekCur = null;
-  var dark = window.matchMedia('(prefers-color-scheme: dark)');
 
   var $ = function (id) { return document.getElementById(id); };
   var main = $('main'), hdr = $('hdr'), sheet = $('sheet'), scrim = $('scrim');
@@ -32,19 +32,11 @@
   }
 
   /* ---------- 과정 색상 ----------
-     주간표 블록은 진한 색 바탕에 흰 글씨, 오늘 목록의 세로 막대는 같은 색조를 쓴다.
-     명도는 흰 글씨 대비를 확보하려고 56%에 고정했다. */
-  function colorOf(cid, light) {
+     흰 글씨가 얹히는 채도 낮은 파스텔 여덟 가지를 과정 순서대로 돌려 쓴다.
+     주간표 블록 바탕과 오늘 목록의 세로 막대가 같은 색을 공유한다. */
+  function colorOf(cid) {
     var i = DB.courses.indexOf(cid);
-    var h = HUES[(i < 0 ? DB.courses.length : i) % HUES.length];
-    var d = dark.matches && !light;
-    return {
-      bg: 'hsl(' + h + ' ' + (d ? 46 : 58) + '% ' + (d ? 47 : 56) + '%)',
-      fg: '#ffffff',
-      bar: 'hsl(' + h + ' 58% ' + (d ? 60 : 52) + '%)',
-      soft: d ? 'hsl(' + h + ' 30% 23%)' : 'hsl(' + h + ' 72% 93%)',
-      ink: d ? 'hsl(' + h + ' 78% 85%)' : 'hsl(' + h + ' 54% 29%)'
-    };
+    return PALETTE[(i < 0 ? DB.courses.length : i) % PALETTE.length];
   }
 
   /* ---------- 저장 ---------- */
@@ -115,7 +107,7 @@
 
   /* 그 주 수업이 걸친 시간대를 정시 단위로 스냅한다.
      교시 칸 대신 시계 눈금을 쓰므로 공강과 연강 길이가 그대로 보인다. */
-  var PPM = 0.82;
+  var PPM = 1;
   function weekRange(cols) {
     var lo = 1e9, hi = -1;
     DB.events.forEach(function (e) {
@@ -188,7 +180,7 @@
       var isNow = isToday && e.start <= now && now < e.end;
       var soon = isToday && !isNow && e.start > now;
       h += '<button class="lesson' + (e.isExam ? ' exam' : '') + (isNow ? ' now' : '') + '" data-ev="' + i + '">'
-        + '<span class="bar" style="background:' + c.bar + '"></span>'
+        + '<span class="bar" style="background:' + c + '"></span>'
         + '<span class="tm">' + e.start + '<br>' + e.end + '</span>'
         + '<span class="bd"><span class="nm">'
         + (isNow ? '<span class="tag now">지금</span>' : '')
@@ -252,12 +244,11 @@
         if (e.date !== d) return;
         var top = (mins(e.start) - R.lo) * PPM;
         var hgt = (mins(e.end) - mins(e.start)) * PPM;
-        var c = colorOf(e.courseId);
+        var c = e.isExam ? '#c9736c' : colorOf(e.courseId);
         var isNow = d === t && e.start <= now && now < e.end;
-        var style = e.isExam ? 'background:var(--danger);color:#fff'
-                             : 'background:' + c.bg + ';color:' + c.fg;
         h += '<button class="ev' + (isNow ? ' now' : '') + '" data-ev="' + idx + '"'
-          + ' style="top:' + top + 'px;height:' + (hgt - 2) + 'px;' + style + '">'
+          + ' style="top:' + top + 'px;height:' + (hgt - 1) + 'px;'
+          + '--c:' + c + ';background:' + c + ';color:#fff">'
           + (e.kind !== '강의' ? '<i class="k">' + esc(e.kind) + '</i>' : '')
           + '<b>' + esc(e.title) + '</b>'
           + (PREF.prof && e.prof && hgt > 46 ? '<i>' + esc(e.prof) + '</i>' : '')
@@ -304,34 +295,34 @@
     var x = cv.getContext('2d');
     // roundRect는 Safari 16.4 미만에 없다. 모서리만 포기하고 계속 그린다.
     if (!x.roundRect) x.roundRect = function (a, b, c, d) { this.rect(a, b, c, d); };
-    var FONT = '-apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+    var FONT = '"Noto Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 
     x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
 
     // 헤더
-    x.fillStyle = '#8b90a6'; x.font = '500 26px ' + FONT;
+    x.fillStyle = '#9aa3a9'; x.font = '400 26px ' + FONT;
     x.fillText(DB.title, PAD, PAD + 30);
-    x.fillStyle = '#141723'; x.font = '700 44px ' + FONT;
+    x.fillStyle = '#2f3438'; x.font = '700 44px ' + FONT;
     x.fillText(weekCur + '주차  ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]), PAD, PAD + 88);
 
     // 요일 헤더
     var gy = HEAD;
     x.textAlign = 'center';
     cols.forEach(function (d, i) {
-      x.fillStyle = '#6b7186'; x.font = '600 24px ' + FONT;
+      x.fillStyle = '#8d969c'; x.font = '500 24px ' + FONT;
       x.fillText(dow(d), PAD + HR + CW * i + CW / 2, gy + 34);
     });
     x.textAlign = 'left';
 
     // 정시 눈금과 세로 구분선
     var gy0 = gy + 54;
-    x.strokeStyle = '#e4e8f0'; x.lineWidth = 1;
+    x.strokeStyle = '#eceff1'; x.lineWidth = 1;
     for (var m = R.lo; m <= R.hi; m += 60) {
       var ly = gy0 + (m - R.lo) * SCALE;
       x.beginPath(); x.moveTo(PAD + HR, ly); x.lineTo(W - PAD, ly); x.stroke();
       if (m === R.hi) continue;
       var hh = m / 60;
-      x.fillStyle = '#9aa1bb'; x.font = '500 20px ' + FONT;
+      x.fillStyle = '#a8b0b5'; x.font = '400 20px ' + FONT;
       x.textAlign = 'right'; x.fillText(hh > 12 ? hh - 12 : hh, PAD + HR - 14, ly + 25); x.textAlign = 'left';
     }
     cols.forEach(function (_, di) {
@@ -346,23 +337,22 @@
       var bx = PAD + HR + CW * di + 3, bw = CW - 6;
       var y = gy0 + (mins(e.start) - R.lo) * SCALE;
       var bh = (mins(e.end) - mins(e.start)) * SCALE - 4;
-      var c = colorOf(e.courseId, true);
-      x.fillStyle = e.isExam ? '#c4344f' : c.bg;
-      x.beginPath(); x.roundRect(bx, y, bw, bh, 6); x.fill();
+      x.fillStyle = e.isExam ? '#c9736c' : colorOf(e.courseId);
+      x.beginPath(); x.roundRect(bx, y, bw, bh, 3); x.fill();
 
       var ty = y + 28;
       x.fillStyle = '#ffffff';
       if (e.kind !== '강의') {
-        x.font = '800 18px ' + FONT; x.globalAlpha = 0.92;
+        x.font = '400 18px ' + FONT; x.globalAlpha = 0.85;
         x.fillText(e.kind, bx + 11, ty); x.globalAlpha = 1; ty += 24;
       }
-      x.font = '700 21px ' + FONT;
+      x.font = '500 21px ' + FONT;
       var room = Math.max(1, Math.floor((bh - (ty - y) + 14) / 26));
       wrap(x, e.title, bw - 22, room).forEach(function (ln) {
         x.fillText(ln, bx + 11, ty); ty += 26;
       });
       if (e.prof && ty < y + bh - 4) {
-        x.font = '500 18px ' + FONT; x.globalAlpha = 0.8;
+        x.font = '400 18px ' + FONT; x.globalAlpha = 0.85;
         x.fillText(e.prof, bx + 11, ty); x.globalAlpha = 1;
       }
     });
@@ -371,10 +361,10 @@
     var ex = nextExam(), fy = H - PAD - 30;
     if (ex) {
       var n = diffDays(today(), ex.date);
-      x.fillStyle = '#c4344f'; x.font = '800 28px ' + FONT;
+      x.fillStyle = '#c9736c'; x.font = '700 28px ' + FONT;
       var tag = n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : '';
       x.fillText(tag, PAD, fy);
-      x.fillStyle = '#4a5064'; x.font = '500 24px ' + FONT;
+      x.fillStyle = '#7d868c'; x.font = '400 24px ' + FONT;
       x.fillText(ex.title + '  ·  ' + md(ex.date) + '(' + dow(ex.date) + ')', PAD + x.measureText(tag).width + 60, fy);
     }
 
@@ -542,7 +532,6 @@
   $('tabToday').onclick = function () { tab = 'today'; render(); };
   $('tabWeek').onclick = function () { tab = 'week'; render(); };
   $('gear').onclick = showSettings;
-  dark.addEventListener('change', function () { if (DB) render(); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && DB) render(); });
 
   function boot(d) {
