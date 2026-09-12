@@ -87,6 +87,7 @@ main { flex: 1; padding: 12px 14px calc(28px + var(--safe-b)); }
        border-radius: 5px; margin-right: 5px; }
 .tag.exam { background: var(--danger); color: #fff; }
 .tag.lab { background: var(--accent); color: #fff; }
+.tag.now { background: var(--text); color: var(--bg); }
 
 .empty { text-align: center; color: var(--muted); padding: 44px 12px; font-size: 14px; }
 
@@ -94,14 +95,39 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 2px; table-
 table.grid th { font-size: 11px; font-weight: 600; color: var(--muted); padding: 2px 0 5px; }
 table.grid th.today { color: var(--accent); }
 table.grid th small { display: block; font-size: 10px; font-weight: 500; opacity: 0.8; }
-table.grid td.hr { width: 24px; font-size: 9.5px; color: var(--muted); text-align: center;
-                   vertical-align: top; padding-top: 3px; font-variant-numeric: tabular-nums; }
-table.grid td.slot { background: var(--surface-2); border-radius: 7px; height: 34px; opacity: 0.4; }
+table.grid td.hr { width: 22px; font-size: 10px; color: var(--muted); text-align: center;
+                   vertical-align: top; padding-top: 4px; font-variant-numeric: tabular-nums; }
+table.grid td.slot { background: var(--surface-2); border-radius: 7px; height: 40px; opacity: 0.4; }
+table.grid td.slot.td { opacity: 0.75; }
 table.grid td { padding: 0; }
-.blk { display: block; width: 100%; height: 100%; min-height: 34px; border-radius: 7px;
-       padding: 4px; font-size: 9.5px; line-height: 1.2; font-weight: 600; text-align: left;
+/* 이번 주에 아무 일정도 없는 교시는 얇게 접는다 */
+table.grid tr.thin td { height: 13px; }
+table.grid tr.thin td.hr { font-size: 9px; padding-top: 1px; opacity: 0.6; }
+table.grid tr.thin td.slot { height: 13px; opacity: 0.22; }
+.blk { display: block; width: 100%; height: 100%; min-height: 40px; border-radius: 7px;
+       padding: 5px 5px; font-size: 10.5px; line-height: 1.22; font-weight: 600; text-align: left;
        overflow: hidden; letter-spacing: -0.02em; word-break: break-all; }
-.blk .k { font-size: 8.5px; font-weight: 800; display: block; }
+.blk .k { font-size: 9px; font-weight: 800; display: block; opacity: 0.9; }
+.blk.now { box-shadow: 0 0 0 2px var(--text); }
+
+/* 학기 전체 주차 스트립 (시험 있는 주는 점) */
+.strip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+         margin: 0 -14px 10px; padding: 0 14px 2px; }
+.strip::-webkit-scrollbar { display: none; }
+.strip .wk { position: relative; flex: none; min-width: 30px; padding: 6px 0; border-radius: 9px;
+             background: var(--surface-2); font-size: 12px; font-weight: 650; color: var(--muted);
+             font-variant-numeric: tabular-nums; }
+.strip .wk.on { background: var(--accent); color: #fff; }
+.strip .wk.off { opacity: 0.34; }
+.strip .wk i { position: absolute; top: 4px; right: 5px; width: 5px; height: 5px;
+               border-radius: 50%; background: var(--danger); }
+.strip .wk.on i { background: #fff; }
+
+/* 하루 진행률 */
+.prog { display: flex; align-items: center; gap: 9px; margin: 0 2px 11px; }
+.prog .bar { flex: 1; height: 4px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.prog .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.prog span { font-size: 11.5px; color: var(--muted); flex: none; }
 
 .scrim { position: fixed; inset: 0; background: rgba(8,10,18,0.5); z-index: 40;
          opacity: 0; pointer-events: none; transition: opacity 0.18s; }

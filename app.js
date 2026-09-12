@@ -18,10 +18,13 @@
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function toDate(s) { var p = s.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); }
   function today() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function nowHM() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
   function diffDays(a, b) { return Math.round((toDate(b) - toDate(a)) / 86400000); }
   function shift(s, n) { var d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
-  function dow(s) { return DOW[toDate(s).getUTCDay()]; }
+  function dowOf(s) { return toDate(s).getUTCDay(); }
+  function dow(s) { return DOW[dowOf(s)]; }
   function md(s) { var p = s.split('-'); return +p[1] + '/' + +p[2]; }
+  function mins(hm) { return +hm.slice(0, 2) * 60 + +hm.slice(3); }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -50,19 +53,18 @@
   scrim.addEventListener('click', closeSheet);
 
   /* ---------- 파생 데이터 ---------- */
+  var real = function (e) { return e.kind !== '휴일'; };
+
   function classDays() {
-    var set = {}, out = [];
-    DB.events.forEach(function (e) { if (e.kind !== '휴일' && !set[e.date]) { set[e.date] = 1; out.push(e.date); } });
+    var seen = {}, out = [];
+    DB.events.forEach(function (e) { if (real(e) && !seen[e.date]) { seen[e.date] = 1; out.push(e.date); } });
     return out.sort();
   }
   function nextExam() {
     var t = today();
-    var list = DB.events.filter(function (e) { return e.isExam && e.date >= t; });
-    return list.length ? list[0] : null;
+    return DB.events.filter(function (e) { return e.isExam && e.date >= t; })[0] || null;
   }
-  function weekNos() {
-    return Object.keys(DB.weeks).map(Number).sort(function (a, b) { return a - b; });
-  }
+  function weekNos() { return Object.keys(DB.weeks).map(Number).sort(function (a, b) { return a - b; }); }
   function weekOf(date) {
     var ns = weekNos();
     for (var i = 0; i < ns.length; i++) {
@@ -73,20 +75,42 @@
     return ns[ns.length - 1];
   }
 
+  /* 학기 내내 한 번도 안 쓰는 요일/교시는 접는다.
+     이 시간표는 토요일 0회, 9교시 0회라 6x9 그리드의 46%만 차 있었다. */
+  var _live = null;
+  function live() {
+    if (_live) return _live;
+    var days = {}, periods = {};
+    DB.events.forEach(function (e) {
+      if (!real(e)) return;
+      days[dowOf(e.date)] = 1;
+      for (var p = e.periods[0]; p <= e.periods[1]; p++) periods[p] = 1;
+    });
+    _live = {
+      days: days,
+      periods: DB.periods.filter(function (p) { return periods[p.no]; })
+    };
+    return _live;
+  }
+  function weekExams(w) {
+    var ds = DB.weeks[w];
+    return DB.events.filter(function (e) { return e.isExam && ds.indexOf(e.date) >= 0; });
+  }
+
   /* ---------- 렌더 ---------- */
   function render() {
     if (!DB) return renderUpload();
     hdr.hidden = false;
 
-    var ex = nextExam();
     $('hTitle').textContent = DB.title;
     $('hSub').textContent = tab === 'today'
-      ? dayCur + ' (' + dow(dayCur) + ')'
+      ? md(dayCur) + ' (' + dow(dayCur) + ')' + (dayCur === today() ? ' · 오늘' : '')
       : weekCur + '주차';
     $('tabToday').setAttribute('aria-selected', tab === 'today');
     $('tabWeek').setAttribute('aria-selected', tab === 'week');
 
     var html = '';
+    var ex = nextExam();
     if (ex) {
       var n = diffDays(today(), ex.date);
       html += '<button class="dday" id="ddayBtn">'
@@ -100,79 +124,111 @@
 
     if ($('ddayBtn')) $('ddayBtn').onclick = showExams;
     wire();
+    var cur = main.querySelector('.lesson.now, .blk.now');
+    if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'center' });
   }
 
+  /* ---------- 오늘 ---------- */
   function viewToday() {
-    var t = today();
+    var t = today(), isToday = dayCur === t, now = nowHM();
     var evs = DB.events.filter(function (e) { return e.date === dayCur; });
+
     var h = '<div class="daynav">'
       + '<button class="arw" data-day="-1">&lsaquo;</button>'
-      + '<b>' + md(dayCur) + ' (' + dow(dayCur) + ')' + (dayCur === t ? ' · 오늘' : '') + '</b>'
+      + '<b>' + md(dayCur) + ' (' + dow(dayCur) + ')</b>'
       + '<button class="arw" data-day="1">&rsaquo;</button></div>';
 
     if (!evs.length) {
       var nd = classDays().filter(function (d) { return d > dayCur; })[0];
-      h += '<div class="empty">수업 없음'
+      return h + '<div class="empty">수업 없음'
         + (nd ? '<br><br><button class="btn ghost" data-goto="' + nd + '">다음 수업일 ' + md(nd) + '(' + dow(nd) + ') 보기</button>' : '')
         + '</div>';
-      return h;
     }
 
-    var nowHM = new Date().toTimeString().slice(0, 5);
+    // 하루 진행률: 첫 수업 시작 ~ 마지막 수업 종료
+    if (isToday) {
+      var a = mins(evs[0].start), b = mins(evs[evs.length - 1].end), c = mins(now);
+      var pct = Math.max(0, Math.min(100, Math.round((c - a) / (b - a) * 100)));
+      var left = evs.filter(function (e) { return e.end > now; }).length;
+      h += '<div class="prog"><div class="bar"><i style="width:' + pct + '%"></i></div>'
+        + '<span>' + (left ? '남은 수업 ' + left + '개' : '오늘 일정 종료') + '</span></div>';
+    }
+
     evs.forEach(function (e, i) {
       var c = colorOf(e.courseId);
-      var live = dayCur === t && e.start <= nowHM && nowHM < e.end;
-      h += '<button class="lesson' + (e.isExam ? ' exam' : '') + (live ? ' now' : '') + '" data-ev="' + i + '">'
+      var isNow = isToday && e.start <= now && now < e.end;
+      var soon = isToday && !isNow && e.start > now;
+      h += '<button class="lesson' + (e.isExam ? ' exam' : '') + (isNow ? ' now' : '') + '" data-ev="' + i + '">'
         + '<span class="bar" style="background:' + c.bar + '"></span>'
         + '<span class="tm">' + e.start + '<br>' + e.end + '</span>'
         + '<span class="bd"><span class="nm">'
+        + (isNow ? '<span class="tag now">지금</span>' : '')
         + (e.isExam ? '<span class="tag exam">' + esc(e.kind) + '</span>' : '')
         + (e.kind === '실습' || e.kind === 'PBL' ? '<span class="tag lab">' + esc(e.kind) + '</span>' : '')
         + esc(e.title) + '</span>'
-        + '<span class="mt">' + esc(e.courseId || '') + (e.prof ? ' · ' + esc(e.prof) : '') + '</span></span>'
-        + '</button>';
+        + '<span class="mt">' + esc(e.courseId || '') + (e.prof ? ' · ' + esc(e.prof) : '')
+        + (isNow ? ' · ' + (mins(e.end) - mins(now)) + '분 남음' : '')
+        + (soon && i && !(isToday && evs[i - 1].end > now) ? '' : '')
+        + '</span></span></button>';
     });
     return h;
   }
 
+  /* ---------- 주간 ---------- */
   function viewWeek() {
-    var ns = weekNos(), dates = DB.weeks[weekCur], t = today();
-    var i0 = ns.indexOf(weekCur);
-    var h = '<div class="wknav">'
-      + '<button class="arw" data-wk="-1"' + (i0 <= 0 ? ' disabled' : '') + '>&lsaquo;</button>'
-      + '<b>' + weekCur + '주차 · ' + md(dates[0]) + ' ~ ' + md(dates[dates.length - 1]) + '</b>'
-      + '<button class="arw" data-wk="1"' + (i0 >= ns.length - 1 ? ' disabled' : '') + '>&rsaquo;</button></div>';
+    var ns = weekNos(), t = today(), now = nowHM();
+    var all = DB.weeks[weekCur];
+    var L = live();
+    var cols = all.filter(function (d) { return L.days[dowOf(d)]; });
+
+    // 학기 전체를 한 줄로: 시험 있는 주는 점으로 표시
+    var strip = '<div class="strip" id="strip">';
+    ns.forEach(function (w) {
+      var ex = weekExams(w).length;
+      var has = DB.events.some(function (e) { return real(e) && DB.weeks[w].indexOf(e.date) >= 0; });
+      strip += '<button class="wk' + (w === weekCur ? ' on' : '') + (has ? '' : ' off') + '" data-week="' + w + '">'
+        + w + (ex ? '<i></i>' : '') + '</button>';
+    });
+    strip += '</div>';
+
+    var h = strip + '<div class="wknav">'
+      + '<button class="arw" data-wk="-1"' + (ns.indexOf(weekCur) <= 0 ? ' disabled' : '') + '>&lsaquo;</button>'
+      + '<b>' + weekCur + '주차 · ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]) + '</b>'
+      + '<button class="arw" data-wk="1"' + (ns.indexOf(weekCur) >= ns.length - 1 ? ' disabled' : '') + '>&rsaquo;</button></div>';
 
     var start = {}, covered = {};
     DB.events.forEach(function (e, idx) {
-      var di = dates.indexOf(e.date);
+      var di = cols.indexOf(e.date);
       if (di < 0) return;
       start[di + '|' + e.periods[0]] = idx;
       for (var p = e.periods[0]; p <= e.periods[1]; p++) covered[di + '|' + p] = 1;
     });
 
     h += '<table class="grid"><thead><tr><th></th>';
-    dates.forEach(function (d) {
+    cols.forEach(function (d) {
       h += '<th class="' + (d === t ? 'today' : '') + '">' + dow(d) + '<small>' + md(d) + '</small></th>';
     });
     h += '</tr></thead><tbody>';
 
-    DB.periods.forEach(function (p) {
-      h += '<tr><td class="hr">' + p.start.slice(0, 2) + '<br>' + p.start.slice(3) + '</td>';
-      dates.forEach(function (d, di) {
+    L.periods.forEach(function (p) {
+      // 이번 주에 아무것도 없는 교시는 얇게 접는다 (점심시간 등)
+      var busy = cols.some(function (_, di) { return covered[di + '|' + p.no]; });
+      h += '<tr class="' + (busy ? '' : 'thin') + '"><td class="hr">'
+        + (busy ? p.start.slice(0, 2) + '<br>' + p.start.slice(3) : p.start.slice(0, 2)) + '</td>';
+      cols.forEach(function (d, di) {
         var k = di + '|' + p.no;
         if (start[k] !== undefined) {
           var e = DB.events[start[k]];
           var span = e.periods[1] - e.periods[0] + 1;
           var c = colorOf(e.courseId);
-          var style = e.isExam
-            ? 'background:var(--danger);color:#fff'
-            : 'background:' + c.bg + ';color:' + c.fg;
-          h += '<td rowspan="' + span + '"><button class="blk" style="' + style + '" data-ev="' + start[k] + '">'
+          var isNow = d === t && e.start <= now && now < e.end;
+          var style = e.isExam ? 'background:var(--danger);color:#fff'
+                               : 'background:' + c.bg + ';color:' + c.fg;
+          h += '<td rowspan="' + span + '"><button class="blk' + (isNow ? ' now' : '') + '" style="' + style + '" data-ev="' + start[k] + '">'
             + (e.kind !== '강의' ? '<span class="k">' + esc(e.kind) + '</span>' : '')
             + esc(e.title) + '</button></td>';
         } else if (!covered[k]) {
-          h += '<td class="slot"></td>';
+          h += '<td class="slot' + (d === t ? ' td' : '') + '"></td>';
         }
       });
       h += '</tr>';
@@ -180,20 +236,19 @@
     return h + '</tbody></table>';
   }
 
+  /* ---------- 이벤트 연결 ---------- */
+  function gotoWeek(delta) {
+    var ns = weekNos(), i = ns.indexOf(weekCur) + delta;
+    if (i >= 0 && i < ns.length) { weekCur = ns[i]; render(); }
+  }
+
   function wire() {
-    Array.prototype.forEach.call(main.querySelectorAll('[data-day]'), function (b) {
-      b.onclick = function () { dayCur = shift(dayCur, +b.dataset.day); render(); };
-    });
-    Array.prototype.forEach.call(main.querySelectorAll('[data-goto]'), function (b) {
-      b.onclick = function () { dayCur = b.dataset.goto; render(); };
-    });
-    Array.prototype.forEach.call(main.querySelectorAll('[data-wk]'), function (b) {
-      b.onclick = function () {
-        var ns = weekNos(), i = ns.indexOf(weekCur) + (+b.dataset.wk);
-        if (i >= 0 && i < ns.length) { weekCur = ns[i]; render(); }
-      };
-    });
-    Array.prototype.forEach.call(main.querySelectorAll('[data-ev]'), function (b) {
+    var q = function (sel, fn) { Array.prototype.forEach.call(main.querySelectorAll(sel), fn); };
+    q('[data-day]', function (b) { b.onclick = function () { dayCur = shift(dayCur, +b.dataset.day); render(); }; });
+    q('[data-goto]', function (b) { b.onclick = function () { dayCur = b.dataset.goto; render(); }; });
+    q('[data-wk]', function (b) { b.onclick = function () { gotoWeek(+b.dataset.wk); }; });
+    q('[data-week]', function (b) { b.onclick = function () { weekCur = +b.dataset.week; render(); }; });
+    q('[data-ev]', function (b) {
       b.onclick = function () {
         var e = tab === 'today'
           ? DB.events.filter(function (x) { return x.date === dayCur; })[+b.dataset.ev]
@@ -201,8 +256,26 @@
         showDetail(e);
       };
     });
+    var on = main.querySelector('.strip .wk.on');
+    if (on) on.parentNode.scrollLeft = on.offsetLeft - on.parentNode.clientWidth / 2 + on.clientWidth / 2;
   }
 
+  /* 좌우 스와이프로 날짜/주 이동 */
+  var sx = 0, sy = 0, tracking = false;
+  main.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true;
+  }, { passive: true });
+  main.addEventListener('touchend', function (e) {
+    if (!tracking || !DB) return;
+    tracking = false;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 55 || Math.abs(dy) > 45) return;
+    var dir = dx < 0 ? 1 : -1;
+    if (tab === 'today') { dayCur = shift(dayCur, dir); render(); } else gotoWeek(dir);
+  }, { passive: true });
+
+  /* ---------- 시트 화면 ---------- */
   function showDetail(e) {
     var n = diffDays(today(), e.date);
     openSheet('<h3>' + esc(e.title) + '</h3>'
@@ -241,7 +314,7 @@
       + 'Android: Chrome 우측 상단 ⋮ → 홈 화면에 추가</div>');
     $('sReplace').onclick = function () { closeSheet(); $('file').click(); };
     $('sReset').onclick = function () {
-      localStorage.removeItem(KEY); DB = null; closeSheet(); hdr.hidden = true; renderUpload();
+      localStorage.removeItem(KEY); DB = null; _live = null; closeSheet(); hdr.hidden = true; renderUpload();
     };
   }
 
@@ -274,14 +347,14 @@
           try {
             var r = TimetableParser.parseTimetable(wb.Sheets[nm], XLSX);
             if (!best || r.events.length > best.events.length) best = r;
-          } catch (e) {}
+          } catch (e2) {}
         });
         if (!best || !best.events.length) throw new Error('시간표 형식을 인식하지 못했습니다.');
-        DB = best; save(DB);
+        DB = best; _live = null; save(DB);
         dayCur = today(); weekCur = weekOf(dayCur); tab = 'today';
         render();
-      } catch (e) {
-        renderUpload(e.message || '파일을 읽지 못했습니다.');
+      } catch (e3) {
+        renderUpload(e3.message || '파일을 읽지 못했습니다.');
       }
       ev.target.value = '';
     };
@@ -294,9 +367,10 @@
   $('tabWeek').onclick = function () { tab = 'week'; render(); };
   $('gear').onclick = showSettings;
   dark.addEventListener('change', function () { if (DB) render(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && DB) render(); });
 
   function boot(d) {
-    DB = d;
+    DB = d; _live = null;
     if (!DB) return renderUpload();
     dayCur = today(); weekCur = weekOf(dayCur);
     render();
