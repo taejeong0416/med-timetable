@@ -177,30 +177,41 @@
 
   /* ---------- 주간 ---------- */
   function viewWeek() {
-    var ns = weekNos(), t = today(), now = nowHM();
-    var all = DB.weeks[weekCur];
-    var L = live();
-    var cols = all.filter(function (d) { return L.days[dowOf(d)]; });
+    var ns = weekNos(), cols = weekCols(weekCur);
 
-    // 학기 전체를 한 줄로: 시험 있는 주는 점으로 표시. 시간표 아래에 놓는다.
-    var strip = '<div class="strip" id="strip">';
+    // 학기 전체를 한 줄로: 시험 있는 주는 점으로 표시
+    var h = '<div class="strip" id="strip">';
     ns.forEach(function (w) {
       var ex = weekExams(w).length;
       var has = DB.events.some(function (e) { return real(e) && DB.weeks[w].indexOf(e.date) >= 0; });
-      strip += '<button class="wk' + (w === weekCur ? ' on' : '') + (has ? '' : ' off') + '" data-week="' + w + '">'
+      h += '<button class="wk' + (w === weekCur ? ' on' : '') + (has ? '' : ' off') + '" data-week="' + w + '">'
         + w + (ex ? '<i></i>' : '') + '</button>';
     });
-    strip += '</div>';
+    h += '</div>';
 
-    var h = '<div class="wknav">'
+    h += '<div class="wknav">'
       + '<button class="arw" data-wk="-1"' + (ns.indexOf(weekCur) <= 0 ? ' disabled' : '') + '>&lsaquo;</button>'
       + '<b>' + weekCur + '주차 · ' + md(cols[0]) + ' ~ ' + md(cols[cols.length - 1]) + '</b>'
       + '<button class="arw" data-wk="1"' + (ns.indexOf(weekCur) >= ns.length - 1 ? ' disabled' : '') + '>&rsaquo;</button></div>';
 
+    // 손가락에 끌려 움직일 수 있게 표를 뷰포트 안 트랙에 담는다
+    return h + '<div class="ttview" id="ttview"><div class="tttrack" id="tttrack">'
+      + weekGrid(weekCur) + '</div></div>';
+  }
+
+  function weekCols(w) {
+    var L = live();
+    return DB.weeks[w].filter(function (d) { return L.days[dowOf(d)]; });
+  }
+
+  /* 한 주치 표 한 장. 드래그할 때 앞뒤 주를 같은 함수로 더 만들어 붙인다. */
+  function weekGrid(wk) {
+    var t = today(), now = nowHM(), cols = weekCols(wk);
+
     // 시계 눈금 기준 배치. 블록 높이가 실제 수업 길이에 비례한다.
     var R = weekRange(cols), pm = ppm(R), H = (R.hi - R.lo) * pm;
 
-    h += '<div class="ttwrap"><div class="tthead"><span></span>';
+    var h = '<div class="ttwrap"><div class="tthead"><span></span>';
     cols.forEach(function (d) {
       h += '<b class="' + (d === t ? 'td' : '') + '">' + dow(d) + '</b>';
     });
@@ -246,7 +257,7 @@
       h += '<div class="nowline" style="top:' + ((nm - R.lo) * pm) + 'px"></div>';
     }
 
-    return h + '</div></div></div>' + strip;
+    return h + '</div></div></div>';
   }
 
   /* ---------- 이벤트 연결 ---------- */
@@ -274,19 +285,72 @@
     if (on) on.parentNode.scrollLeft = on.offsetLeft - on.parentNode.clientWidth / 2 + on.clientWidth / 2;
   }
 
-  /* 좌우 스와이프로 날짜/주 이동 */
-  var sx = 0, sy = 0, tracking = false;
+  /* ---------- 끌어서 주 넘기기 ----------
+     표가 손가락을 그대로 따라온다. 끌기 시작할 때 앞뒤 주를 양옆에 붙여
+     한 줄로 만들고, 놓을 때 넘길지 제자리로 돌아올지 정한다. */
+  var drag = null;
+
+  function dragPrepare(d) {
+    var ns = weekNos(), i = ns.indexOf(weekCur);
+    d.prev = i > 0 ? ns[i - 1] : null;
+    d.next = i < ns.length - 1 ? ns[i + 1] : null;
+
+    var view = $('ttview');
+    view.style.height = d.tr.offsetHeight + 'px';   // 앞뒤 주가 더 길어도 칸이 튀지 않는다
+    d.w = view.clientWidth;
+
+    d.tr.classList.add('dragging');                 // 끄는 동안은 전환 없이 손가락만 따라간다
+    d.tr.insertAdjacentHTML('afterbegin', d.prev ? weekGrid(d.prev) : '<div class="ttwrap ghost"></div>');
+    d.tr.insertAdjacentHTML('beforeend', d.next ? weekGrid(d.next) : '<div class="ttwrap ghost"></div>');
+    d.tr.style.transform = 'translateX(-100%)';
+  }
+
   main.addEventListener('touchstart', function (e) {
-    if (e.touches.length !== 1) return;
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true;
+    if (!DB || e.touches.length !== 1 || drag) return;
+    var tr = $('tttrack');
+    if (!tr || !tr.contains(e.target)) return;
+    drag = { x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, axis: '', tr: tr };
   }, { passive: true });
-  main.addEventListener('touchend', function (e) {
-    if (!tracking || !DB) return;
-    tracking = false;
-    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
-    if (Math.abs(dx) < 55 || Math.abs(dy) > 45) return;
-    var dir = dx < 0 ? 1 : -1;
-    gotoWeek(dir);
+
+  main.addEventListener('touchmove', function (e) {
+    if (!drag) return;
+    var dx = e.touches[0].clientX - drag.x, dy = e.touches[0].clientY - drag.y;
+    if (!drag.axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dy) >= Math.abs(dx)) { drag = null; return; }   // 세로로 긋는 중이면 넘긴다
+      drag.axis = 'x';
+      dragPrepare(drag);
+    }
+    e.preventDefault();
+    // 학기 양 끝에서는 끌리는 양을 줄여 더 없다는 걸 손으로 알린다
+    if ((dx > 0 && drag.prev === null) || (dx < 0 && drag.next === null)) dx *= 0.28;
+    drag.dx = dx;
+    drag.tr.style.transform = 'translateX(calc(-100% + ' + dx + 'px))';
+  }, { passive: false });
+
+  main.addEventListener('touchend', function () {
+    if (!drag) return;
+    var d = drag; drag = null;
+    if (d.axis !== 'x') return;
+
+    var trip = Math.min(72, d.w * 0.22), go = 0;
+    if (d.dx <= -trip && d.next !== null) go = 1;
+    else if (d.dx >= trip && d.prev !== null) go = -1;
+
+    d.tr.classList.remove('dragging');
+    d.tr.style.transform = 'translateX(' + (-100 - go * 100) + '%)';
+
+    var settled = false;
+    var done = function () {
+      if (settled) return;
+      settled = true;
+      d.tr.removeEventListener('transitionend', done);
+      if (go) weekCur = go > 0 ? d.next : d.prev;
+      slide = null;              // 끌어서 넘긴 건 밀려 들어오는 효과를 또 주지 않는다
+      render();
+    };
+    d.tr.addEventListener('transitionend', done);
+    setTimeout(done, 420);       // transitionend가 안 오는 경우 대비
   }, { passive: true });
 
   /* ---------- 시트 화면 ---------- */
