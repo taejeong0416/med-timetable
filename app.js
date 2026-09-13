@@ -207,10 +207,12 @@
     h += '</div><div class="tt" style="height:' + H + 'px">';
 
     // 시간축은 12시간제. 오후 1시를 13이라 쓰지 않는다.
+    // 정시마다 눈금을 긋는다. 수업 블록이 안쪽 격자선을 덮어도 여기로 경계를 읽는다.
     h += '<div class="axis">';
-    for (var m = R.lo; m < R.hi; m += 60) {
+    for (var m = R.lo; m <= R.hi; m += 60) {
       var hh = m / 60;
-      h += '<u style="top:' + ((m - R.lo) * pm) + 'px">' + (hh > 12 ? hh - 12 : hh) + '</u>';
+      h += '<s style="top:' + ((m - R.lo) * pm) + 'px"></s>'
+        + (m < R.hi ? '<u style="top:' + ((m - R.lo) * pm) + 'px">' + (hh > 12 ? hh - 12 : hh) + '</u>' : '');
     }
     h += '</div><div class="body">';
 
