@@ -229,9 +229,11 @@
         h += '<button class="ev' + (isNow ? ' now' : '') + '" data-ev="' + idx + '"'
           + ' style="top:' + top + 'px;height:' + (hgt - 1) + 'px;'
           + '--c:' + c + ';background:' + c + ';color:#fff">'
-          + (e.kind !== '강의' ? '<i class="k">' + esc(e.kind) + '</i>' : '')
+          // 제목에 이미 '실습'·'형성평가'가 들어 있으면 유형 줄을 또 쓰지 않는다
+          + (e.kind !== '강의' && e.title.indexOf(e.kind) < 0
+              ? '<i class="k">' + esc(e.kind) + '</i>' : '')
           + '<b>' + esc(e.title) + '</b>'
-          + (PREF.prof && e.prof && hgt > 46 ? '<i>' + esc(e.prof) + '</i>' : '')
+          + (PREF.prof && e.prof && hgt > 70 ? '<i>' + esc(e.prof) + '</i>' : '')
           + '</button>';
       });
       h += '</div>';
