@@ -384,9 +384,9 @@
     });
   }
 
-  /* ---------- 시험을 캘린더로 내보내기 ----------
+  /* ---------- 시험 일정 캘린더에 저장 ----------
      알림·위젯·잠금화면은 아이폰 캘린더가 훨씬 잘한다. 여기서는 .ics만 넘긴다.
-     시험 유형을 골라 내보낸다. 실습시험만 따로 보고 싶을 때가 있다.
+     시험 유형을 여러 개 골라 한 파일로 내보낸다.
      시간대는 붙이지 않는다. 그러면 기기의 현지 시각 그대로 읽힌다. */
   function icsEsc(s) {
     return String(s == null ? '' : s).replace(/([\\;,])/g, '\\$1').replace(/\n/g, '\\n');
@@ -438,14 +438,15 @@
     return order.map(function (k) { return { kind: k, n: n[k] }; });
   }
 
-  function exportIcs(kind) {
-    var list = DB.events.filter(function (e) { return e.isExam && e.kind === kind; });
+  function exportIcs(kinds) {
+    var list = DB.events.filter(function (e) { return e.isExam && kinds.indexOf(e.kind) >= 0; });
     if (!list.length) return;
-    var blob = new Blob([buildIcs(list, DB.title + ' ' + kind)],
+    var name = kinds.length === 1 ? kinds[0] : '시험';
+    var blob = new Blob([buildIcs(list, DB.title + ' ' + name)],
                         { type: 'text/calendar;charset=utf-8' });
     var url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url;
-    a.download = '시험_' + kind + '.ics';
+    a.download = '시험_' + name + '.ics';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -466,10 +467,11 @@
       + '<div class="opt"><span>주간표에 교수명</span><div class="seg" id="segProf">'
       + '<button data-prof="0"' + (PREF.prof ? '' : ' class="on"') + '>숨김</button>'
       + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
-      + (ks.length ? '<div class="icsw"><span>시험을 캘린더로</span>'
+      + (ks.length ? '<div class="icsw"><span>시험 일정 캘린더에 저장</span>'
           + ks.map(function (k) {
-              return '<button data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
-            }).join('') + '</div>' : '')
+              return '<button class="on" data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
+            }).join('')
+          + '<button class="save" id="icsSave"></button></div>' : '')
       + '<button class="btn" id="sReplace">엑셀 다시 올리기</button>'
       + '<button class="btn ghost" id="sReset">시간표 삭제</button>'
       + '<div class="note"><b>홈 화면에 추가</b><br>'
@@ -485,9 +487,27 @@
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-prof]'), function (b) {
       b.onclick = function () { PREF.prof = b.dataset.prof === '1'; savePref(); showSettings(); render(); };
     });
-    Array.prototype.forEach.call(sheet.querySelectorAll('[data-ics]'), function (b) {
-      b.onclick = function () { exportIcs(b.dataset.ics); };
-    });
+    if (ks.length) {
+      var chips = Array.prototype.slice.call(sheet.querySelectorAll('[data-ics]'));
+      var saveBtn = $('icsSave');
+      var picked = function () {
+        return chips.filter(function (b) { return b.classList.contains('on'); })
+                    .map(function (b) { return b.dataset.ics; });
+      };
+      var sync = function () {
+        var sel = picked();
+        var n = sel.reduce(function (a, k) {
+          return a + ks.filter(function (x) { return x.kind === k; })[0].n;
+        }, 0);
+        saveBtn.textContent = n ? n + '개 저장' : '유형을 고르세요';
+        saveBtn.disabled = !n;
+      };
+      chips.forEach(function (b) {
+        b.onclick = function () { b.classList.toggle('on'); sync(); };
+      });
+      saveBtn.onclick = function () { exportIcs(picked()); };
+      sync();
+    }
     $('sReplace').onclick = function () { closeSheet(); $('file').click(); };
     $('sReset').onclick = function () {
       localStorage.removeItem(KEY); DB = null; _live = null; _cmap = null; closeSheet(); hdr.hidden = true; renderUpload();

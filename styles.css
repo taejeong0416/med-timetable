@@ -114,12 +114,16 @@ body[data-fs="l"] { --blk: 12.5px; }
 .seg { display: flex; gap: 2px; background: var(--surface-2); padding: 2px; border-radius: 6px; flex: none; }
 .seg button { padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; color: var(--muted); }
 
-/* 시험 유형 칩: 누르면 그 유형만 .ics로 나간다 */
+/* 시험 유형 칩: 고른 유형을 한 번에 .ics로 내보낸다 */
 .icsw { display: flex; flex-wrap: wrap; gap: 6px; padding: 11px 0;
         border-top: 1px solid var(--line); font-size: 14px; }
 .icsw > span { width: 100%; margin-bottom: 2px; }
 .icsw button { padding: 7px 11px; border-radius: 6px; background: var(--surface-2);
-               font-size: 13px; font-weight: 500; color: var(--text); }
+               font-size: 13px; font-weight: 500; color: var(--muted); }
+.icsw button.on { background: var(--accent); color: #fff; }
+.icsw .save { width: 100%; margin-top: 4px; padding: 11px; background: var(--surface-2);
+              font-weight: 650; color: var(--text); }
+.icsw .save[disabled] { opacity: 0.4; }
 .seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--card); }
 
 /* 학기 전체 주차 스트립 (시험 있는 주는 점) */
