@@ -80,7 +80,7 @@ main { flex: 1; padding: 12px 11px calc(28px + var(--safe-b)); }
             font-size: calc(var(--blk) - 1.5px); line-height: 1.15; margin-top: 2px; }
 .tt .ev i.k { opacity: 0.85; margin: 0 0 1px; }
 .tt .ev.now { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--c); z-index: 2; }
-.tt .nowline { position: absolute; left: 28px; right: 0; height: 0;
+.tt .nowline { position: absolute; left: 0; right: 0; height: 0;
                border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
 .tt .nowline::before { content: ''; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px;
                        border-radius: 50%; background: var(--danger); }

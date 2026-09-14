@@ -231,6 +231,8 @@
       h += '<hr style="top:' + ((m2 - R.lo) * pm) + 'px">';
     }
 
+    var nm = mins(now);
+
     cols.forEach(function (d) {
       h += '<div class="col' + (d === t ? ' td' : '') + '">';
       DB.events.forEach(function (e, idx) {
@@ -249,13 +251,13 @@
           + (PREF.prof && e.prof && hgt > 70 ? '<i>' + esc(e.prof) + '</i>' : '')
           + '</button>';
       });
+
+      // 지금 시각 선은 오늘 열에만 긋는다. 다른 요일까지 가로지를 이유가 없다.
+      if (d === t && nm >= R.lo && nm <= R.hi) {
+        h += '<div class="nowline" style="top:' + ((nm - R.lo) * pm) + 'px"></div>';
+      }
       h += '</div>';
     });
-
-    var nm = mins(now);
-    if (cols.indexOf(t) >= 0 && nm >= R.lo && nm <= R.hi) {
-      h += '<div class="nowline" style="top:' + ((nm - R.lo) * pm) + 'px"></div>';
-    }
 
     return h + '</div></div></div>';
   }
