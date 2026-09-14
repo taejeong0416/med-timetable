@@ -469,7 +469,7 @@
       + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
       + (ks.length ? '<div class="icsw"><span>시험 일정 캘린더에 저장</span>'
           + ks.map(function (k) {
-              return '<button class="on" data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
+              return '<button data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
             }).join('')
           + '<button class="save" id="icsSave"></button></div>' : '')
       + '<button class="btn" id="sReplace">엑셀 다시 올리기</button>'
