@@ -54,7 +54,7 @@ main { flex: 1; padding: 12px 11px calc(28px + var(--safe-b)); }
 .tthead span { width: 28px; flex: none; }
 .tthead b { flex: 1; text-align: center; font-size: 12px; font-weight: 500; color: #8d969c;
             border-left: 1px solid var(--grid); }
-.tthead b.td { color: var(--accent); font-weight: 700; }
+.tthead b.td { color: var(--text); font-weight: 700; }
 
 .ttwrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
           background: var(--surface); box-shadow: var(--card); }
@@ -81,9 +81,9 @@ main { flex: 1; padding: 12px 11px calc(28px + var(--safe-b)); }
 .tt .ev i.k { opacity: 0.85; margin: 0 0 1px; }
 .tt .ev.now { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--c); z-index: 2; }
 .tt .nowline { position: absolute; left: 0; right: 0; height: 0;
-               border-top: 2px solid var(--danger); z-index: 3; pointer-events: none; }
+               border-top: 2px solid var(--text); z-index: 3; pointer-events: none; }
 .tt .nowline::before { content: ''; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px;
-                       border-radius: 50%; background: var(--danger); }
+                       border-radius: 50%; background: var(--text); }
 
 /* 끌어서 주 넘기기: 표 한 장씩을 한 줄로 세우고 트랙을 민다 */
 .ttview { overflow: hidden; }
