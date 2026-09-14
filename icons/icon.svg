@@ -1,15 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" fill="#2f3438"/>
-  <!-- 고리 -->
-  <rect x="176" y="120" width="24" height="52" rx="12" fill="#ffffff"/>
-  <rect x="312" y="120" width="24" height="52" rx="12" fill="#ffffff"/>
-  <!-- 달력 틀 -->
-  <rect x="112" y="146" width="288" height="252" rx="34" fill="none" stroke="#ffffff" stroke-width="22"/>
-  <!-- 머리띠 구분선 -->
-  <path d="M123 214 H389" stroke="#ffffff" stroke-width="22"/>
+  <rect width="512" height="512" fill="#edeff4"/>
+  <!-- 달력 카드 -->
+  <rect x="88" y="100" width="336" height="312" rx="40" fill="#ffffff"/>
+  <!-- 머리띠 -->
+  <path d="M88 140a40 40 0 0 1 40-40h256a40 40 0 0 1 40 40v16H88z" fill="#c5ced8"/>
   <!-- 시간표 블록 -->
-  <rect x="152" y="252" width="78" height="50" rx="9" fill="#6f92b8"/>
-  <rect x="282" y="252" width="78" height="50" rx="9" fill="#c4a765"/>
-  <rect x="152" y="318" width="78" height="50" rx="9" fill="#74ada6"/>
-  <rect x="282" y="318" width="78" height="50" rx="9" fill="#8e81b5"/>
+  <rect x="116" y="190" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="192" y="190" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="268" y="190" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="344" y="190" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="116" y="258" width="52" height="46" rx="11" fill="#6f9ae8"/>
+  <rect x="192" y="258" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="268" y="258" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="344" y="258" width="52" height="46" rx="11" fill="#ef938c"/>
+  <rect x="116" y="326" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="192" y="326" width="52" height="46" rx="11" fill="#5f8b63"/>
+  <rect x="268" y="326" width="52" height="46" rx="11" fill="#e9ecf0"/>
+  <rect x="344" y="326" width="52" height="46" rx="11" fill="#e9ecf0"/>
 </svg>
