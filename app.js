@@ -384,7 +384,76 @@
     });
   }
 
+  /* ---------- 시험을 캘린더로 내보내기 ----------
+     알림·위젯·잠금화면은 아이폰 캘린더가 훨씬 잘한다. 여기서는 .ics만 넘긴다.
+     시험 유형을 골라 내보낸다. 실습시험만 따로 보고 싶을 때가 있다.
+     시간대는 붙이지 않는다. 그러면 기기의 현지 시각 그대로 읽힌다. */
+  function icsEsc(s) {
+    return String(s == null ? '' : s).replace(/([\\;,])/g, '\\$1').replace(/\n/g, '\\n');
+  }
+
+  /* 한 줄 75바이트 제한. 한글은 한 자가 3바이트라 글자 수로 세면 넘친다. */
+  function icsFold(line) {
+    var out = '', len = 0, b;
+    for (var i = 0; i < line.length; i++) {
+      b = line.charCodeAt(i) < 128 ? 1 : 3;
+      if (len + b > 73) { out += '\r\n '; len = 1; }
+      out += line[i]; len += b;
+    }
+    return out;
+  }
+
+  function icsTime(date, hm) { return date.replace(/-/g, '') + 'T' + hm.replace(':', '') + '00'; }
+
+  function buildIcs(list, name) {
+    var stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//medtt//KR', 'CALSCALE:GREGORIAN',
+             'X-WR-CALNAME:' + icsEsc(name)];
+    list.forEach(function (e) {
+      var desc = [e.courseId, e.kind, e.prof].filter(Boolean).join(' · ');
+      L.push('BEGIN:VEVENT',
+        'UID:' + hash(e.date + e.start + e.title) + '@medtt',
+        'DTSTAMP:' + stamp,
+        'DTSTART:' + icsTime(e.date, e.start),
+        'DTEND:' + icsTime(e.date, e.end),
+        // 제목에 이미 유형이 들어 있으면 앞에 또 붙이지 않는다
+        'SUMMARY:' + icsEsc((e.title.indexOf(e.kind) < 0 ? '[' + e.kind + '] ' : '') + e.title));
+      if (desc) L.push('DESCRIPTION:' + icsEsc(desc));
+      L.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-P1D',
+             'DESCRIPTION:' + icsEsc('내일 ' + e.title), 'END:VALARM',
+             'END:VEVENT');
+    });
+    L.push('END:VCALENDAR');
+    return L.map(icsFold).join('\r\n') + '\r\n';
+  }
+
+  /* 시험 유형을 나온 순서대로. [{kind, n}] */
+  function examKinds() {
+    var order = [], n = {};
+    DB.events.forEach(function (e) {
+      if (!e.isExam) return;
+      if (!n[e.kind]) order.push(e.kind);
+      n[e.kind] = (n[e.kind] || 0) + 1;
+    });
+    return order.map(function (k) { return { kind: k, n: n[k] }; });
+  }
+
+  function exportIcs(kind) {
+    var list = DB.events.filter(function (e) { return e.isExam && e.kind === kind; });
+    if (!list.length) return;
+    var blob = new Blob([buildIcs(list, DB.title + ' ' + kind)],
+                        { type: 'text/calendar;charset=utf-8' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url;
+    a.download = '시험_' + kind + '.ics';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
   function showSettings() {
+    var ks = DB ? examKinds() : [];
     openSheet('<h3>설정</h3><div class="sub">' + esc(DB ? DB.title : '') + '</div>'
       + (DB ? '<div class="kv"><span>일정</span><b>' + DB.stats.events + '개 · ' + DB.stats.weeks + '주 · 시험 ' + DB.stats.exams + '개</b></div>' : '')
       + '<div class="opt"><span>글자 크기</span><div class="seg" id="segFs">'
@@ -397,6 +466,10 @@
       + '<div class="opt"><span>주간표에 교수명</span><div class="seg" id="segProf">'
       + '<button data-prof="0"' + (PREF.prof ? '' : ' class="on"') + '>숨김</button>'
       + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
+      + (ks.length ? '<div class="icsw"><span>시험을 캘린더로</span>'
+          + ks.map(function (k) {
+              return '<button data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
+            }).join('') + '</div>' : '')
       + '<button class="btn" id="sReplace">엑셀 다시 올리기</button>'
       + '<button class="btn ghost" id="sReset">시간표 삭제</button>'
       + '<div class="note"><b>홈 화면에 추가</b><br>'
@@ -411,6 +484,9 @@
     });
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-prof]'), function (b) {
       b.onclick = function () { PREF.prof = b.dataset.prof === '1'; savePref(); showSettings(); render(); };
+    });
+    Array.prototype.forEach.call(sheet.querySelectorAll('[data-ics]'), function (b) {
+      b.onclick = function () { exportIcs(b.dataset.ics); };
     });
     $('sReplace').onclick = function () { closeSheet(); $('file').click(); };
     $('sReset').onclick = function () {
