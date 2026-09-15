@@ -133,6 +133,9 @@ body[data-fs="l"] { --blk: 12.5px; }
 .strip .wk { position: relative; flex: none; min-width: 30px; padding: 6px 0; border-radius: 4px;
              background: var(--surface-2); font-size: 12px; font-weight: 500; color: var(--muted);
              font-variant-numeric: tabular-nums; }
+/* 지난 주는 흐리게. .on(지금 보는 주)이 지난 주여도 색은 유지된다 */
+.strip .wk.past { background: transparent; color: var(--faint); }
+.strip .wk.past i { background: var(--faint); }
 .strip .wk.on { background: var(--accent); color: #fff; }
 .strip .wk.off { opacity: 0.34; }
 .strip .wk i { position: absolute; top: 4px; right: 5px; width: 5px; height: 5px;
