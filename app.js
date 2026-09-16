@@ -416,9 +416,11 @@
       + ' stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'
       + '<rect x="2.5" y="4.5" width="15" height="11" rx="2.5"/>'
       + '<path d="M3.4 6.2 10 11l6.6-4.8"/></svg>'
-      + '<b>' + (st.over ? '고생했어 푹 쉬어~' : '시험 화이팅!') + '</b>'
+      + '<b>' + (st.over ? '시험 치느라 수고했어 푹 쉬어~' : '시험 화이팅! 잘 볼거야!!') + '</b>'
       + '<span>' + md(today()) + '(' + dow(today()) + ') · ' + names + '</span>'
-      + '<button class="lclose">닫기</button>'
+      + '<button class="lclose" aria-label="닫기">'
+      + '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.7" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>'
       + '</div><div class="stripe"></div>';
   }
 
