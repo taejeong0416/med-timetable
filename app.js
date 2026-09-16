@@ -411,21 +411,8 @@
 
   function letterHtml(st) {
     var names = st.list.map(function (e) { return esc(e.title); }).join(', ');
-    var when = today() + ' (' + dow(today()) + ')';
-    return st.over
-      ? '<h3>오늘 정말 수고했어</h3><div class="sub">' + when + '</div>'
-        + '<div class="letter">'
-        + '<p>' + names + ' 끝났다.</p>'
-        + '<p>잘 봤든 아쉽든 오늘 몫은 여기까지야. 답을 다시 맞춰보는 일은 내일의 네가 하면 되니까, '
-        + '지금은 아무 생각 없이 쉬어도 괜찮아.</p>'
-        + '<p>고생 많았어. 푹 자자!</p></div>'
-      : '<h3>오늘 시험 화이팅</h3><div class="sub">' + when + '</div>'
-        + '<div class="letter">'
-        + '<p>오늘은 ' + names + ' 시험이 있는 날이야.</p>'
-        + '<p>그동안 책상에 앉아 있던 시간은 어디로도 사라지지 않았어. '
-        + '문제를 펼치면 눈보다 손이 먼저 기억할 거야.</p>'
-        + '<p>긴장되는 건 그만큼 준비했다는 뜻이니까, 숨 한 번 크게 쉬고 들어가자.</p>'
-        + '<p>화이팅!</p></div>';
+    return '<h3>' + (st.over ? '고생했어 푹 쉬어~' : '시험 화이팅!') + '</h3>'
+      + '<div class="sub">' + md(today()) + '(' + dow(today()) + ') · ' + names + '</div>';
   }
 
   function updateMail() {

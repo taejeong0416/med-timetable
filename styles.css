@@ -190,6 +190,3 @@ body[data-fs="l"] { --blk: 12.5px; }
           background: var(--danger); box-shadow: 0 0 0 2px var(--bg); display: none; }
 .mail.new i { display: block; }
 .mail.new { color: var(--text); }
-.letter { font-size: 14.5px; line-height: 1.7; color: var(--text); }
-.letter p { margin: 0 0 11px; }
-.letter p:last-child { margin-bottom: 0; font-weight: 650; }
