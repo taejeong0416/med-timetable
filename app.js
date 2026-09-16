@@ -84,7 +84,7 @@
     sheet.classList.add('on'); scrim.classList.add('on');
   }
   function closeSheet() { sheet.classList.remove('on'); scrim.classList.remove('on'); }
-  scrim.addEventListener('click', closeSheet);
+  scrim.addEventListener('click', function () { closeSheet(); closeLetter(); });
 
   /* ---------- 파생 데이터 ---------- */
   var real = function (e) { return e.kind !== '휴일'; };
@@ -411,8 +411,25 @@
 
   function letterHtml(st) {
     var names = st.list.map(function (e) { return esc(e.title); }).join(', ');
-    return '<h3>' + (st.over ? '고생했어 푹 쉬어~' : '시험 화이팅!') + '</h3>'
-      + '<div class="sub">' + md(today()) + '(' + dow(today()) + ') · ' + names + '</div>';
+    return '<div class="stripe"></div><div class="inner">'
+      + '<svg viewBox="0 0 20 20" width="34" height="34" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'
+      + '<rect x="2.5" y="4.5" width="15" height="11" rx="2.5"/>'
+      + '<path d="M3.4 6.2 10 11l6.6-4.8"/></svg>'
+      + '<b>' + (st.over ? '고생했어 푹 쉬어~' : '시험 화이팅!') + '</b>'
+      + '<span>' + md(today()) + '(' + dow(today()) + ') · ' + names + '</span>'
+      + '<button class="lclose">닫기</button>'
+      + '</div><div class="stripe"></div>';
+  }
+
+  function openLetter(st) {
+    $('letterBody').innerHTML = letterHtml(st);
+    $('letterbox').classList.add('on'); scrim.classList.add('on');
+    $('letterBody').querySelector('.lclose').onclick = closeLetter;
+  }
+  function closeLetter() {
+    $('letterbox').classList.remove('on');
+    if (!sheet.classList.contains('on')) scrim.classList.remove('on');
   }
 
   function updateMail() {
@@ -421,7 +438,7 @@
     b.hidden = !st;
     if (!st) return;
     b.classList.toggle('new', !readMarks()[st.key]);
-    b.onclick = function () { markRead(st.key); openSheet(letterHtml(st)); updateMail(); };
+    b.onclick = function () { markRead(st.key); openLetter(st); updateMail(); };
   }
 
   /* ---------- 시험 일정 캘린더에 저장 ----------

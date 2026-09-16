@@ -190,3 +190,26 @@ body[data-fs="l"] { --blk: 12.5px; }
           background: var(--danger); box-shadow: 0 0 0 2px var(--bg); display: none; }
 .mail.new i { display: block; }
 .mail.new { color: var(--text); }
+
+/* 편지는 화면 가운데 뜬다. 항공우편 테두리와 괘선으로 종이처럼 보이게 한다. */
+.letterbox { position: fixed; left: 50%; top: 50%; z-index: 42;
+             width: min(304px, calc(100% - 56px));
+             transform: translate(-50%, -50%) scale(0.92); opacity: 0; pointer-events: none;
+             transition: opacity 0.18s, transform 0.2s cubic-bezier(0.3,0.9,0.3,1); }
+.letterbox.on { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+.paper { background: #fffdf5; border-radius: 10px; overflow: hidden; text-align: center;
+         box-shadow: 0 20px 48px rgba(8,10,18,0.3); }
+.paper .stripe { height: 9px;
+  background: repeating-linear-gradient(45deg,
+    var(--danger) 0 9px, #fffdf5 9px 18px, var(--accent) 18px 27px, #fffdf5 27px 36px); }
+.paper .inner { padding: 26px 20px 20px;
+  background-image: repeating-linear-gradient(#fffdf5 0 27px, #ece5d3 27px 28px);
+  background-position: 0 14px; }
+.paper svg { color: var(--faint); margin-bottom: 14px; }
+.paper b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.paper span { display: block; margin-top: 7px; font-size: 12.5px; color: var(--muted); }
+.paper .lclose { margin-top: 20px; padding: 8px 22px; border-radius: 20px;
+                 background: rgba(47,52,56,0.06); font-size: 13px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .letterbox { transition-duration: 0.01s; }
+}
