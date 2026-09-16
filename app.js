@@ -70,7 +70,7 @@
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
 
   /* 표시 설정: 블록이 좁아 정보를 다 못 넣으므로 무엇을 보일지 고르게 한다 */
-  var PREF = { fs: 'm', prof: true, cmode: 'course' };
+  var PREF = { fs: 'm', prof: true, cmode: 'course', letter: true };
   try { Object.assign(PREF, JSON.parse(localStorage.getItem('medtt.pref') || '{}')); } catch (e) {}
   function savePref() {
     try { localStorage.setItem('medtt.pref', JSON.stringify(PREF)); } catch (e) {}
@@ -436,7 +436,7 @@
   }
 
   function updateMail() {
-    var b = $('mail'), st = DB ? letterState() : null;
+    var b = $('mail'), st = (DB && PREF.letter) ? letterState() : null;
     if (!b) return;                 // 서비스 워커가 옛 index.html을 내주는 동안
     b.hidden = !st;
     if (!st) return;
@@ -527,6 +527,9 @@
       + '<div class="opt"><span>주간표에 교수명</span><div class="seg" id="segProf">'
       + '<button data-prof="0"' + (PREF.prof ? '' : ' class="on"') + '>숨김</button>'
       + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
+      + '<div class="opt"><span>시험날 편지</span><div class="seg" id="segLetter">'
+      + '<button data-letter="0"' + (PREF.letter ? '' : ' class="on"') + '>안 받음</button>'
+      + '<button data-letter="1"' + (PREF.letter ? ' class="on"' : '') + '>받음</button></div></div>'
       + (ks.length ? '<div class="icsw"><span>시험 일정 캘린더에 저장</span>'
           + ks.map(function (k) {
               return '<button data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
@@ -546,6 +549,12 @@
     });
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-prof]'), function (b) {
       b.onclick = function () { PREF.prof = b.dataset.prof === '1'; savePref(); showSettings(); render(); };
+    });
+    Array.prototype.forEach.call(sheet.querySelectorAll('[data-letter]'), function (b) {
+      b.onclick = function () {
+        PREF.letter = b.dataset.letter === '1';
+        savePref(); showSettings(); closeLetter(); render();
+      };
     });
     if (ks.length) {
       var chips = Array.prototype.slice.call(sheet.querySelectorAll('[data-ics]'));
