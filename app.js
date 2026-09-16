@@ -390,13 +390,17 @@
 
   /* ---------- 시험날 편지 ----------
      시험 있는 날에만 헤더에 편지가 놓인다. 시험 전에는 응원, 끝난 뒤에는 인사가 온다.
-     읽었는지는 날짜와 전·후를 묶은 열쇠로 기억하므로, 같은 날에도 두 통이 따로 온다. */
+     읽었다는 기록은 그날 하루치만 남는다. 날짜가 바뀌면 통째로 버리므로
+     다음 시험날에는 시험 전·후 편지가 다시 안 읽은 상태로 온다. */
   var LKEY = 'medtt.letter';
   function readMarks() {
-    try { return JSON.parse(localStorage.getItem(LKEY) || '{}'); } catch (e) { return {}; }
+    try {
+      var m = JSON.parse(localStorage.getItem(LKEY) || '{}');
+      return m.day === today() ? m : {};
+    } catch (e) { return {}; }
   }
-  function markRead(k) {
-    var m = readMarks(); m[k] = 1;
+  function markRead(phase) {
+    var m = readMarks(); m.day = today(); m[phase] = 1;
     try { localStorage.setItem(LKEY, JSON.stringify(m)); } catch (e) {}
   }
 
@@ -406,7 +410,7 @@
     if (!list.length) return null;
     var now = nowHM();
     var over = list.every(function (e) { return e.end <= now; });
-    return { over: over, list: list, key: t + ':' + (over ? 'post' : 'pre') };
+    return { over: over, list: list, phase: over ? 'post' : 'pre' };
   }
 
   function letterHtml(st) {
@@ -440,8 +444,8 @@
     if (!b) return;                 // 서비스 워커가 옛 index.html을 내주는 동안
     b.hidden = !st;
     if (!st) return;
-    b.classList.toggle('new', !readMarks()[st.key]);
-    b.onclick = function () { markRead(st.key); openLetter(st); updateMail(); };
+    b.classList.toggle('new', !readMarks()[st.phase]);
+    b.onclick = function () { markRead(st.phase); openLetter(st); updateMail(); };
   }
 
   /* ---------- 시험 일정 캘린더에 저장 ----------
