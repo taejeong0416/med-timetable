@@ -163,6 +163,7 @@
     }
     $('hSub').innerHTML = weekCur + '주차' + chip;
     if ($('ddayBtn')) $('ddayBtn').onclick = showExams;
+    updateMail();
 
     main.innerHTML = viewWeek();
     wire();
@@ -385,6 +386,55 @@
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-jump]'), function (b) {
       b.onclick = function () { weekCur = weekOf(b.dataset.jump); closeSheet(); render(); };
     });
+  }
+
+  /* ---------- 시험날 편지 ----------
+     시험 있는 날에만 헤더에 편지가 놓인다. 시험 전에는 응원, 끝난 뒤에는 인사가 온다.
+     읽었는지는 날짜와 전·후를 묶은 열쇠로 기억하므로, 같은 날에도 두 통이 따로 온다. */
+  var LKEY = 'medtt.letter';
+  function readMarks() {
+    try { return JSON.parse(localStorage.getItem(LKEY) || '{}'); } catch (e) { return {}; }
+  }
+  function markRead(k) {
+    var m = readMarks(); m[k] = 1;
+    try { localStorage.setItem(LKEY, JSON.stringify(m)); } catch (e) {}
+  }
+
+  function letterState() {
+    var t = today();
+    var list = DB.events.filter(function (e) { return e.isExam && e.date === t; });
+    if (!list.length) return null;
+    var now = nowHM();
+    var over = list.every(function (e) { return e.end <= now; });
+    return { over: over, list: list, key: t + ':' + (over ? 'post' : 'pre') };
+  }
+
+  function letterHtml(st) {
+    var names = st.list.map(function (e) { return esc(e.title); }).join(', ');
+    var when = today() + ' (' + dow(today()) + ')';
+    return st.over
+      ? '<h3>오늘 정말 수고했어</h3><div class="sub">' + when + '</div>'
+        + '<div class="letter">'
+        + '<p>' + names + ' 끝났다.</p>'
+        + '<p>잘 봤든 아쉽든 오늘 몫은 여기까지야. 답을 다시 맞춰보는 일은 내일의 네가 하면 되니까, '
+        + '지금은 아무 생각 없이 쉬어도 괜찮아.</p>'
+        + '<p>고생 많았어. 푹 자자!</p></div>'
+      : '<h3>오늘 시험 화이팅</h3><div class="sub">' + when + '</div>'
+        + '<div class="letter">'
+        + '<p>오늘은 ' + names + ' 시험이 있는 날이야.</p>'
+        + '<p>그동안 책상에 앉아 있던 시간은 어디로도 사라지지 않았어. '
+        + '문제를 펼치면 눈보다 손이 먼저 기억할 거야.</p>'
+        + '<p>긴장되는 건 그만큼 준비했다는 뜻이니까, 숨 한 번 크게 쉬고 들어가자.</p>'
+        + '<p>화이팅!</p></div>';
+  }
+
+  function updateMail() {
+    var b = $('mail'), st = DB ? letterState() : null;
+    if (!b) return;                 // 서비스 워커가 옛 index.html을 내주는 동안
+    b.hidden = !st;
+    if (!st) return;
+    b.classList.toggle('new', !readMarks()[st.key]);
+    b.onclick = function () { markRead(st.key); openSheet(letterHtml(st)); updateMail(); };
   }
 
   /* ---------- 시험 일정 캘린더에 저장 ----------

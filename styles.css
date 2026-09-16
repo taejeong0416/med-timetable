@@ -180,5 +180,16 @@ body[data-fs="l"] { --blk: 12.5px; }
 .note b { color: var(--text); font-weight: 650; }
 .err { background: var(--danger-soft); border: 1px solid var(--danger);
        color: var(--danger); border-radius: var(--radius); padding: 11px 13px; font-size: 13px; margin-top: 14px; }
-.gear { position: absolute; right: 10px; top: calc(var(--safe-t) + 6px); font-size: 16px;
-        padding: 6px 8px; color: var(--muted); }
+.hbtns { position: absolute; right: 10px; top: calc(var(--safe-t) + 6px);
+          display: flex; align-items: center; gap: 2px; }
+.gear { font-size: 16px; padding: 6px 8px; color: var(--muted); }
+
+/* 시험 당일에만 나오는 편지함. 안 읽었으면 빨간 점이 붙는다. */
+.mail { position: relative; display: flex; padding: 6px 7px; color: var(--muted); }
+.mail i { position: absolute; top: 3px; right: 4px; width: 7px; height: 7px; border-radius: 50%;
+          background: var(--danger); box-shadow: 0 0 0 2px var(--bg); display: none; }
+.mail.new i { display: block; }
+.mail.new { color: var(--text); }
+.letter { font-size: 14.5px; line-height: 1.7; color: var(--text); }
+.letter p { margin: 0 0 11px; }
+.letter p:last-child { margin-bottom: 0; font-weight: 650; }
