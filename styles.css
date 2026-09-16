@@ -202,15 +202,14 @@ body[data-fs="l"] { --blk: 12.5px; }
 .paper .stripe { height: 9px;
   background: repeating-linear-gradient(45deg,
     var(--danger) 0 9px, #fffdf5 9px 18px, var(--accent) 18px 27px, #fffdf5 27px 36px); }
-.paper .inner { position: relative; padding: 26px 20px 24px;
+.paper .inner { padding: 26px 20px 14px;
   background-image: repeating-linear-gradient(#fffdf5 0 27px, #ece5d3 27px 28px);
   background-position: 0 14px; }
 .paper svg { color: var(--faint); margin-bottom: 14px; }
 .paper b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -0.02em;
             line-height: 1.4; word-break: keep-all; }
 .paper span { display: block; margin-top: 7px; font-size: 12.5px; color: var(--muted); }
-.paper .lclose { position: absolute; top: 7px; right: 7px; display: flex;
-                 padding: 5px; color: var(--faint); }
+.paper .lclose { display: flex; margin: 14px auto 0; padding: 4px; color: var(--faint); }
 @media (prefers-reduced-motion: reduce) {
   .letterbox { transition-duration: 0.01s; }
 }

@@ -1,4 +1,4 @@
-var CACHE = 'medtt-v15';
+var CACHE = 'medtt-v16';
 var SHELL = [
   '.', 'index.html', 'styles.css', 'app.js', 'parser.js',
   'vendor/xlsx.full.min.js', 'manifest.webmanifest',
