@@ -126,7 +126,7 @@ body[data-fs="l"] { --blk: 12.5px; }
 .icsw .save[disabled] { opacity: 0.4; }
 .seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--card); }
 
-/* 학기 전체 주차 스트립 (시험 있는 주는 점) */
+/* 학기 전체 주차 스트립 (남은 시험이 있는 주는 점) */
 .strip { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
          margin: 0 -11px 10px; padding: 0 11px 2px; }
 .strip::-webkit-scrollbar { display: none; }
@@ -135,7 +135,6 @@ body[data-fs="l"] { --blk: 12.5px; }
              font-variant-numeric: tabular-nums; }
 /* 지난 주는 흐리게. .on(지금 보는 주)이 지난 주여도 색은 유지된다 */
 .strip .wk.past { background: transparent; color: var(--faint); }
-.strip .wk.past i { background: var(--faint); }
 .strip .wk.on { background: var(--accent); color: #fff; }
 .strip .wk.off { opacity: 0.34; }
 .strip .wk i { position: absolute; top: 4px; right: 5px; width: 5px; height: 5px;

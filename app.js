@@ -179,11 +179,11 @@
   function viewWeek() {
     var ns = weekNos(), cols = weekCols(weekCur);
 
-    // 학기 전체를 한 줄로: 시험 있는 주는 점으로, 지난 주는 흐리게
+    // 학기 전체를 한 줄로: 남은 시험이 있는 주는 점으로, 지난 주는 흐리게
     var t = today();
     var h = '<div class="strip" id="strip">';
     ns.forEach(function (w) {
-      var ds = DB.weeks[w], ex = weekExams(w).length;
+      var ds = DB.weeks[w], ex = weekExams(w).some(function (e) { return e.date >= t; });
       var has = DB.events.some(function (e) { return real(e) && ds.indexOf(e.date) >= 0; });
       var gone = ds[ds.length - 1] < t;
       h += '<button class="wk' + (w === weekCur ? ' on' : '') + (has ? '' : ' off')
