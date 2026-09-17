@@ -70,7 +70,7 @@
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
 
   /* 표시 설정: 블록이 좁아 정보를 다 못 넣으므로 무엇을 보일지 고르게 한다 */
-  var PREF = { fs: 'm', prof: true, cmode: 'course', letter: true };
+  var PREF = { fs: 'm', prof: true, cmode: 'course' };
   try { Object.assign(PREF, JSON.parse(localStorage.getItem('medtt.pref') || '{}')); } catch (e) {}
   function savePref() {
     try { localStorage.setItem('medtt.pref', JSON.stringify(PREF)); } catch (e) {}
@@ -84,7 +84,7 @@
     sheet.classList.add('on'); scrim.classList.add('on');
   }
   function closeSheet() { sheet.classList.remove('on'); scrim.classList.remove('on'); }
-  scrim.addEventListener('click', function () { closeSheet(); closeLetter(); });
+  scrim.addEventListener('click', closeSheet);
 
   /* ---------- 파생 데이터 ---------- */
   var real = function (e) { return e.kind !== '휴일'; };
@@ -163,7 +163,6 @@
     }
     $('hSub').innerHTML = weekCur + '주차' + chip;
     if ($('ddayBtn')) $('ddayBtn').onclick = showExams;
-    updateMail();
 
     main.innerHTML = viewWeek();
     wire();
@@ -388,66 +387,6 @@
     });
   }
 
-  /* ---------- 시험날 편지 ----------
-     시험 있는 날에만 헤더에 편지가 놓인다. 시험 전에는 응원, 끝난 뒤에는 인사가 온다.
-     읽었다는 기록은 그날 하루치만 남는다. 날짜가 바뀌면 통째로 버리므로
-     다음 시험날에는 시험 전·후 편지가 다시 안 읽은 상태로 온다. */
-  var LKEY = 'medtt.letter';
-  function readMarks() {
-    try {
-      var m = JSON.parse(localStorage.getItem(LKEY) || '{}');
-      return m.day === today() ? m : {};
-    } catch (e) { return {}; }
-  }
-  function markRead(phase) {
-    var m = readMarks(); m.day = today(); m[phase] = 1;
-    try { localStorage.setItem(LKEY, JSON.stringify(m)); } catch (e) {}
-  }
-
-  function letterState() {
-    var t = today();
-    var list = DB.events.filter(function (e) { return e.isExam && e.date === t; });
-    if (!list.length) return null;
-    var now = nowHM();
-    var over = list.every(function (e) { return e.end <= now; });
-    return { over: over, list: list, phase: over ? 'post' : 'pre' };
-  }
-
-  function letterHtml(st) {
-    var names = st.list.map(function (e) { return esc(e.title); }).join(', ');
-    return '<div class="stripe"></div><div class="inner">'
-      + '<svg viewBox="0 0 20 20" width="34" height="34" fill="none" stroke="currentColor"'
-      + ' stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'
-      + '<rect x="2.5" y="4.5" width="15" height="11" rx="2.5"/>'
-      + '<path d="M3.4 6.2 10 11l6.6-4.8"/></svg>'
-      + '<b>' + (st.over ? '시험 치느라 수고했어 푹 쉬어~' : '시험 화이팅! 잘 볼거야!!') + '</b>'
-      + '<span>' + md(today()) + '(' + dow(today()) + ') · ' + names + '</span>'
-      + '<button class="lclose" aria-label="닫기">'
-      + '<svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor"'
-      + ' stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
-      + '<path d="M5 8l5 5 5-5"/></svg></button>'
-      + '</div><div class="stripe"></div>';
-  }
-
-  function openLetter(st) {
-    $('letterBody').innerHTML = letterHtml(st);
-    $('letterbox').classList.add('on'); scrim.classList.add('on');
-    $('letterBody').querySelector('.lclose').onclick = closeLetter;
-  }
-  function closeLetter() {
-    $('letterbox').classList.remove('on');
-    if (!sheet.classList.contains('on')) scrim.classList.remove('on');
-  }
-
-  function updateMail() {
-    var b = $('mail'), st = (DB && PREF.letter) ? letterState() : null;
-    if (!b) return;                 // 서비스 워커가 옛 index.html을 내주는 동안
-    b.hidden = !st;
-    if (!st) return;
-    b.classList.toggle('new', !readMarks()[st.phase]);
-    b.onclick = function () { markRead(st.phase); openLetter(st); updateMail(); };
-  }
-
   /* ---------- 시험 일정 캘린더에 저장 ----------
      알림·위젯·잠금화면은 아이폰 캘린더가 훨씬 잘한다. 여기서는 .ics만 넘긴다.
      시험 유형을 여러 개 골라 한 파일로 내보낸다.
@@ -531,9 +470,6 @@
       + '<div class="opt"><span>주간표에 교수명</span><div class="seg" id="segProf">'
       + '<button data-prof="0"' + (PREF.prof ? '' : ' class="on"') + '>숨김</button>'
       + '<button data-prof="1"' + (PREF.prof ? ' class="on"' : '') + '>표시</button></div></div>'
-      + '<div class="opt"><span>시험날 편지</span><div class="seg" id="segLetter">'
-      + '<button data-letter="0"' + (PREF.letter ? '' : ' class="on"') + '>안 받음</button>'
-      + '<button data-letter="1"' + (PREF.letter ? ' class="on"' : '') + '>받음</button></div></div>'
       + (ks.length ? '<div class="icsw"><span>시험 일정 캘린더에 저장</span>'
           + ks.map(function (k) {
               return '<button data-ics="' + esc(k.kind) + '">' + esc(k.kind) + ' ' + k.n + '</button>';
@@ -553,12 +489,6 @@
     });
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-prof]'), function (b) {
       b.onclick = function () { PREF.prof = b.dataset.prof === '1'; savePref(); showSettings(); render(); };
-    });
-    Array.prototype.forEach.call(sheet.querySelectorAll('[data-letter]'), function (b) {
-      b.onclick = function () {
-        PREF.letter = b.dataset.letter === '1';
-        savePref(); showSettings(); closeLetter(); render();
-      };
     });
     if (ks.length) {
       var chips = Array.prototype.slice.call(sheet.querySelectorAll('[data-ics]'));
