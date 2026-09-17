@@ -166,6 +166,9 @@ body[data-fs="l"] { --blk: 12.5px; }
 .exrow .i b { display: block; font-size: 14px; font-weight: 600; }
 .exrow .i span { font-size: 12px; color: var(--muted); }
 .exrow.past { opacity: 0.38; }
+.exnone { padding: 14px 0; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.expast { display: block; width: 100%; margin: 6px 0; padding: 11px; border-radius: 6px;
+          background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--muted); }
 
 .hero { text-align: center; padding: 46px 16px 20px; }
 .hero img { width: 76px; height: 76px; border-radius: 19px; margin-bottom: 16px; }

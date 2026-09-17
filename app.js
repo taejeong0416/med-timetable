@@ -162,7 +162,7 @@
         + '<span>' + esc(ex.title) + '</span></button>';
     }
     $('hSub').innerHTML = weekCur + '주차' + chip;
-    if ($('ddayBtn')) $('ddayBtn').onclick = showExams;
+    if ($('ddayBtn')) $('ddayBtn').onclick = function () { showExams(false); };
 
     main.innerHTML = viewWeek();
     wire();
@@ -370,21 +370,31 @@
       + '<div class="kv"><span>원본</span><b style="font-weight:400;color:var(--muted)">' + esc(e.raw) + '</b></div>');
   }
 
-  function showExams() {
+  // 지난 시험은 접어 두고, 펼치면 최근에 끝난 것부터 보인다
+  function showExams(showPast) {
     var t = today();
-    var h = '<h3>시험 일정</h3><div class="sub">전체 ' + DB.stats.exams + '개</div>';
-    DB.events.filter(function (e) { return e.isExam; }).forEach(function (e) {
+    var exams = DB.events.filter(function (e) { return e.isExam; });
+    var up = exams.filter(function (e) { return e.date >= t; });
+    var past = exams.filter(function (e) { return e.date < t; }).reverse();
+    var row = function (e) {
       var n = diffDays(t, e.date);
-      h += '<button class="exrow' + (n < 0 ? ' past' : '') + '" data-jump="' + e.date + '">'
+      return '<button class="exrow' + (n < 0 ? ' past' : '') + '" data-jump="' + e.date + '">'
         + '<span class="d">' + (n < 0 ? '지남' : n === 0 ? '오늘' : 'D-' + n) + '</span>'
         + '<span class="i"><b>' + esc(e.title) + '</b>'
         + '<span>' + esc(e.courseId) + ' · ' + md(e.date) + '(' + dow(e.date) + ') ' + e.start + '~' + e.end + '</span></span>'
         + '</button>';
-    });
+    };
+    var h = '<h3>시험 일정</h3><div class="sub">남은 시험 ' + up.length + '개 · 전체 ' + exams.length + '개</div>'
+      + (up.length ? up.map(row).join('') : '<div class="exnone">남은 시험이 없습니다</div>');
+    if (past.length) {
+      h += '<button class="expast" id="exPast">' + (showPast ? '완료된 시험 숨기기' : '완료된 시험 보기 ' + past.length) + '</button>';
+      if (showPast) h += past.map(row).join('');
+    }
     openSheet(h);
     Array.prototype.forEach.call(sheet.querySelectorAll('[data-jump]'), function (b) {
       b.onclick = function () { weekCur = weekOf(b.dataset.jump); closeSheet(); render(); };
     });
+    if (past.length) $('exPast').onclick = function () { showExams(!showPast); };
   }
 
   /* ---------- 시험 일정 캘린더에 저장 ----------
